@@ -1,0 +1,45 @@
+{% from "govuk/components/header/macro.njk" import govukHeader %}
+{% from "govuk/components/footer/macro.njk" import govukFooter %}
+{% from "govuk/components/skip-link/macro.njk" import govukSkipLink %}
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+  <head>
+    <meta charset="utf-8">
+    <title>{% block pageTitle %}{{ serviceName }}{% endblock %} - GOV.UK</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0c0c">
+    <link rel="stylesheet" href="/stylesheets/main.css">
+    <link rel="icon" sizes="48x48" href="/assets/images/favicon.ico">
+    <link rel="icon" sizes="any" href="/assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="/assets/images/govuk-icon-mask.svg" color="#0b0c0c">
+    <link rel="apple-touch-icon" href="/assets/images/govuk-icon-180.png">
+    <link rel="manifest" href="/assets/manifest.json">
+  </head>
+  <body class="govuk-template__body">
+    <script nonce="{{ cspNonce }}">
+      document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');
+    </script>
+
+    {{ govukSkipLink({ href: "#main-content", text: "Skip to main content" }) }}
+
+    <header role="banner">
+      {{ govukHeader({ serviceName: serviceName, serviceUrl: "/" }) }}
+    </header>
+
+    <div class="govuk-width-container">
+      <main class="govuk-main-wrapper" id="main-content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    <footer role="contentinfo">
+      {{ govukFooter() }}
+    </footer>
+
+    <script type="module" nonce="{{ cspNonce }}" src="/javascripts/govuk-frontend.min.js"></script>
+    <script type="module" nonce="{{ cspNonce }}">
+      import { initAll } from '/javascripts/govuk-frontend.min.js'
+      initAll()
+    </script>
+  </body>
+</html>
