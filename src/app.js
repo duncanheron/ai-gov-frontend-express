@@ -12,17 +12,21 @@ const {
   csrfProtection,
   generateCsrfToken,
 } = require("./middleware/security");
+const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
+const indexRouter = require("./routes/index");
+const registerRouter = require("./routes/register");
 
 function createApp() {
   const app = express();
 
   const viewsPath = path.join(__dirname, "views");
   const govukFrontendPath = path.join(__dirname, "..", "node_modules", "govuk-frontend", "dist");
-  nunjucks.configure([viewsPath, govukFrontendPath], {
+  const nunjucksEnv = nunjucks.configure([viewsPath, govukFrontendPath], {
     autoescape: true,
     express: app,
     watch: !config.isProduction && !config.isTest,
   });
+  nunjucksEnv.addGlobal("serviceName", "Register your details");
   app.set("view engine", "njk");
 
   app.use(pinoHttp({ logger }));
@@ -41,6 +45,12 @@ function createApp() {
   app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
   });
+
+  app.use("/", indexRouter);
+  app.use("/register", registerRouter);
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   return app;
 }
