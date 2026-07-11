@@ -4,9 +4,15 @@ description: Pick up or create a Linear ticket for this repo, implement it on it
 ---
 
 This repo tracks work as Linear issues in the **ai-gov-frontend-express** project
-(team: **Tpximpact**, key `TPX`). There is no native GitHub<->Linear integration
-installed, so status changes and PR linking are done explicitly through the
-Linear MCP tools rather than relying on "Closes TPX-123" auto-detection.
+(team: **Tpximpact**, key `TPX`). The native GitHub<->Linear integration is
+installed for this repo, so branch/PR linking and most status transitions
+happen automatically (branch named after an issue auto-attaches to it; PRs
+referencing an issue link automatically; merging typically auto-completes the
+issue). Treat that as the primary mechanism, but verify it actually fired
+(check the issue's status/attachments after pushing/merging) and fall back to
+the Linear MCP tools (`save_issue`, `save_comment`) to fix it by hand if it
+didn't — the automation has been inconsistent before (some issues transitioned
+automatically, others needed a manual nudge).
 
 ## Workflow
 
@@ -40,9 +46,11 @@ Linear MCP tools rather than relying on "Closes TPX-123" auto-detection.
 6. **Stop for review.** Do not merge the PR yourself unless explicitly asked —
    hand back to the user once it's open.
 
-7. **On merge**, move the Linear issue(s) to `Done` via `save_issue` and add a
-   comment (`save_comment`) linking the merged PR. If a parent issue's
-   sub-issues are all Done, move the parent to Done too.
+7. **On merge**, check whether the GitHub integration already moved the
+   issue(s) to `Done` and attached the PR. If it did, nothing to do. If not
+   (or only partially — e.g. a parent moved but a sub-issue didn't), fix it
+   manually: `save_issue` (`state: "Done"`) and `save_comment` linking the
+   merged PR.
 
 ## Notes
 
