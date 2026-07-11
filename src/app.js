@@ -19,6 +19,7 @@ const registrationsRouter = require("./routes/registrations");
 
 function createApp() {
   const app = express();
+  app.set("trust proxy", 1);
 
   const viewsPath = path.join(__dirname, "views");
   const govukFrontendPath = path.join(__dirname, "..", "node_modules", "govuk-frontend", "dist");
