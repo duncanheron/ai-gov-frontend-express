@@ -18,4 +18,9 @@ async function get(reference) {
   return result.rows[0] || null;
 }
 
-module.exports = { create, get };
+async function list() {
+  const result = await pool.query("SELECT * FROM registrations ORDER BY submitted_at DESC");
+  return result.rows;
+}
+
+module.exports = { create, get, list };
