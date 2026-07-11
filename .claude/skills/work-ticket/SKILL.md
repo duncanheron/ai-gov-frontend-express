@@ -57,5 +57,5 @@ automatically, others needed a manual nudge).
 - Team's issue states: `Backlog`, `Todo`, `In Progress`, `Done`, `Canceled`,
   `Duplicate` — there is no "In Review" state, so a ticket stays `In Progress`
   for the whole PR-open/review period.
-- `main` requires PRs — don't push directly to it except for genuine one-off
-  repo bootstrapping (e.g. the very first commit of an empty repo).
+- `main` has GitHub branch protection enabled and rejects direct pushes — all
+  changes, with no exceptions, go through a PR.
