@@ -23,4 +23,20 @@ router.get("/", async (req, res) => {
   });
 });
 
+router.get("/:reference", async (req, res, next) => {
+  const registration = await registrations.get(req.params.reference);
+
+  if (!registration) {
+    return next();
+  }
+
+  res.render("registrations/detail.njk", {
+    fullName: registration.full_name,
+    email: registration.email,
+    dateOfBirthFormatted: formatDate(registration.date_of_birth),
+    reference: registration.reference,
+    submittedAtFormatted: formatDate(registration.submitted_at),
+  });
+});
+
 module.exports = router;
