@@ -3,6 +3,7 @@ const request = require("supertest");
 const { JSDOM } = require("jsdom");
 const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
+const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 
 const axeSource = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
@@ -21,6 +22,10 @@ async function expectNoViolations(html) {
 }
 
 describe("accessibility", () => {
+  beforeAll(async () => {
+    await prepareTestDatabase();
+  });
+
   it("homepage has no automatically detectable accessibility violations", async () => {
     const app = createApp();
     const response = await request(app).get("/");

@@ -1,8 +1,13 @@
 const request = require("supertest");
 const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
+const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 
 describe("registration journey - happy path", () => {
+  beforeAll(async () => {
+    await prepareTestDatabase();
+  });
+
   it("completes start -> details -> check answers -> confirmation", async () => {
     const app = createApp();
     const agent = request.agent(app);
