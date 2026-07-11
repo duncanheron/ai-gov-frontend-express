@@ -1,0 +1,26 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% block pageTitle %}Registration details{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">Registration details</h1>
+
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Full name" }, value: { text: fullName } },
+        { key: { text: "Email address" }, value: { text: email } },
+        { key: { text: "Date of birth" }, value: { text: dateOfBirthFormatted } },
+        { key: { text: "Reference" }, value: { text: reference } },
+        { key: { text: "Submitted" }, value: { text: submittedAtFormatted } }
+      ]
+    }) }}
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/registrations">Back to registrations</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
