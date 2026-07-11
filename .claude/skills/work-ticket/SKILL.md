@@ -14,21 +14,55 @@ the Linear MCP tools (`save_issue`, `save_comment`) to fix it by hand if it
 didn't — the automation has been inconsistent before (some issues transitioned
 automatically, others needed a manual nudge).
 
+## No implementation without an approved, `Todo` issue
+
+Never write code, branch, or otherwise start implementation for work that
+doesn't have a Linear issue in **`Todo`** state. This is a hard rule, not a
+suggestion.
+
+- Moving an issue from `Backlog` to `Todo` is a **human-only action** — it is
+  the review/approval step. Claude must never perform that transition itself,
+  no matter how confident it is the scope is right or how small the change
+  looks.
+- An issue Claude creates always lands in `Backlog` and stays there until the
+  user moves it. If the user asks to fast-track something, Claude still may
+  not move it to `Todo` on their behalf — say so and wait for them to do it.
+- If asked to build or fix something with no matching issue: stop, draft the
+  issue (see the detail bar below), create it in Linear (`Backlog`), share its
+  content and link, and wait. Do not start implementation in the same turn.
+- Before picking up any issue, confirm its state really is `Todo` (via
+  `list_issues`/`get_issue`) — don't rely on a stale earlier check.
+
+### What counts as "solid detail" in an issue
+
+A ticket is ready for a human to move to `Todo` when its description covers:
+
+- **Problem / context** — why this is needed, not just what to build.
+- **Scope** — what's in and explicitly what's out.
+- **Acceptance criteria** — a short checklist of what "done" looks like.
+- **Technical notes** — anything Claude would otherwise have to re-derive or
+  ask about mid-implementation (files/patterns to reuse, constraints).
+
+A one-line title with no description is not enough, even for small changes.
+
 ## Workflow
 
 1. **Get a ticket.**
-   - Picking up existing work: use `mcp__claude_ai_Linear__list_issues` (project:
-     `ai-gov-frontend-express`, state: Todo/Backlog) or ask the user which one.
-   - New work: agree the scope with the user first, then create it with
+   - Picking up existing work: use `mcp__claude_ai_Linear__list_issues`
+     (project: `ai-gov-frontend-express`, `state: "Todo"`) or ask the user
+     which one. Issues still in `Backlog` are not eligible for pickup.
+   - New work: draft the issue to the detail bar above, create it with
      `mcp__claude_ai_Linear__save_issue` (team `Tpximpact`, project
-     `ai-gov-frontend-express`). Keep tickets small — one reviewable PR's worth of
-     work. Only group multiple sub-issues into a single PR when they are so
-     tightly coupled that splitting them would produce artificial, broken
-     intermediate diffs (e.g. several changes to the same file that only make
-     sense together) — the default is one ticket, one branch, one PR.
+     `ai-gov-frontend-express`) — it lands in `Backlog` — then stop and wait
+     for the user to move it to `Todo` (see the rule above). Keep tickets
+     small — one reviewable PR's worth of work. Only group multiple
+     sub-issues into a single PR when they are so tightly coupled that
+     splitting them would produce artificial, broken intermediate diffs
+     (e.g. several changes to the same file that only make sense together) —
+     the default is one ticket, one branch, one PR.
 
 2. **Move it to In Progress** via `save_issue` (`state: "In Progress"`) before
-   writing any code.
+   writing any code. Only do this for an issue already in `Todo`.
 
 3. **Branch.** Use the issue's Linear-suggested `gitBranchName` (returned by
    `save_issue`/`get_issue`) rather than inventing a name, so the branch name
