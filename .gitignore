@@ -5,3 +5,5 @@ coverage/
 *.log
 .DS_Store
 .claude/scheduled_tasks.lock
+.vercel
+.env*
