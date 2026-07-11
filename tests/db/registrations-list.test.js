@@ -33,6 +33,9 @@ describe("registrations data module - list", () => {
 
     const found = await registrations.list();
 
-    expect(found.map((registration) => registration.reference)).toEqual(["TEST-LATER", "TEST-EARLIER"]);
+    expect(found.map((registration) => registration.reference)).toEqual([
+      "TEST-LATER",
+      "TEST-EARLIER",
+    ]);
   });
 });
