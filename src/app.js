@@ -15,6 +15,7 @@ const {
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 const indexRouter = require("./routes/index");
 const registerRouter = require("./routes/register");
+const registrationsRouter = require("./routes/registrations");
 
 function createApp() {
   const app = express();
@@ -48,6 +49,7 @@ function createApp() {
 
   app.use("/", indexRouter);
   app.use("/register", registerRouter);
+  app.use("/registrations", registrationsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

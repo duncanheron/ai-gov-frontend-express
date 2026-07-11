@@ -1,0 +1,27 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% block pageTitle %}Registrations{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    <h1 class="govuk-heading-xl">Registrations</h1>
+
+    {% if rows.length %}
+      {{ govukTable({
+        caption: "All registrations",
+        captionClasses: "govuk-visually-hidden",
+        head: [
+          { text: "Full name" },
+          { text: "Reference" },
+          { text: "Submitted" }
+        ],
+        rows: rows
+      }) }}
+    {% else %}
+      <p class="govuk-body">There are no registrations yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

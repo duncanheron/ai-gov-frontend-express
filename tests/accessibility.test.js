@@ -32,6 +32,12 @@ describe("accessibility", () => {
     await expectNoViolations(response.text);
   });
 
+  it("registrations list page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const response = await request(app).get("/registrations");
+    await expectNoViolations(response.text);
+  });
+
   it("details page (empty) has no automatically detectable accessibility violations", async () => {
     const app = createApp();
     const response = await request(app).get("/register/details");
@@ -75,6 +81,28 @@ describe("accessibility", () => {
   it("404 page has no automatically detectable accessibility violations", async () => {
     const app = createApp();
     const response = await request(app).get("/not-a-real-page");
+    await expectNoViolations(response.text);
+  });
+
+  it("registrations list page (with rows) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/register/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/register/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+    const checkAnswers = await agent.get("/register/check-answers");
+    const checkAnswersToken = extractCsrfToken(checkAnswers.text);
+    await agent.post("/register/check-answers").type("form").send({ _csrf: checkAnswersToken });
+
+    const response = await agent.get("/registrations");
     await expectNoViolations(response.text);
   });
 });
