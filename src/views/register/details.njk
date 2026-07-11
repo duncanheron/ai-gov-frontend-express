@@ -1,0 +1,81 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block pageTitle %}{% if errors.length %}Error: {% endif %}Your details{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if errors.length %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: errors
+      }) }}
+    {% endif %}
+
+    <h1 class="govuk-heading-xl">Your details</h1>
+
+    <form method="post" action="/register/details" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+      {{ govukInput({
+        id: "fullName",
+        name: "fullName",
+        label: { text: "Full name", classes: "govuk-label--m" },
+        value: values.fullName,
+        autocomplete: "name",
+        errorMessage: { text: fieldErrors.fullName } if fieldErrors.fullName else undefined
+      }) }}
+
+      {{ govukInput({
+        id: "email",
+        name: "email",
+        type: "email",
+        label: { text: "Email address", classes: "govuk-label--m" },
+        value: values.email,
+        autocomplete: "email",
+        spellcheck: false,
+        errorMessage: { text: fieldErrors.email } if fieldErrors.email else undefined
+      }) }}
+
+      {{ govukDateInput({
+        id: "dateOfBirth",
+        namePrefix: "dateOfBirth",
+        fieldset: {
+          legend: {
+            text: "Date of birth",
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        hint: {
+          text: "For example, 27 3 1985"
+        },
+        errorMessage: { text: fieldErrors.dateOfBirth } if fieldErrors.dateOfBirth else undefined,
+        items: [
+          {
+            name: "day",
+            classes: "govuk-input--width-2" + (" govuk-input--error" if dateErrorParts.day else ""),
+            value: values.dobDay
+          },
+          {
+            name: "month",
+            classes: "govuk-input--width-2" + (" govuk-input--error" if dateErrorParts.month else ""),
+            value: values.dobMonth
+          },
+          {
+            name: "year",
+            classes: "govuk-input--width-4" + (" govuk-input--error" if dateErrorParts.year else ""),
+            value: values.dobYear
+          }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}
