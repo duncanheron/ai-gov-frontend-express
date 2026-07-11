@@ -7,14 +7,16 @@ Journey: homepage (start page) -> your details -> check your answers -> confirma
 ## Requirements
 
 - Node.js 24.x (see `.nvmrc`)
-- Docker + Docker Compose (optional, for containerised runs)
+- PostgreSQL (for submitted registrations - see `.env.example` for the `DATABASE_URL` shape)
+- Docker + Docker Compose (optional, for containerised runs - brings up Postgres for you)
 
 ## Local setup
 
 ```
 nvm use
 npm install
-cp .env.example .env   # then set SESSION_SECRET to a long random string
+cp .env.example .env   # set SESSION_SECRET, and point DATABASE_URL at a reachable Postgres
+npm run migrate:up     # applies schema migrations
 npm run dev
 ```
 
@@ -28,22 +30,29 @@ The app is served at http://localhost:3000.
 - `npm run lint` / `npm run lint:fix` - ESLint
 - `npm run format` / `npm run format:check` - Prettier
 - `npm run build:assets` - compile GOV.UK Frontend Sass/JS/static assets into `public/`
+- `npm run migrate:up` / `npm run migrate:down` - apply/roll back Postgres schema migrations
 
 ## Running with Docker Compose
 
 ```
-cp .env.example .env   # optional - a dev-only default SESSION_SECRET is used otherwise
+cp .env.example .env   # optional - dev-only defaults are used otherwise
 docker compose up --build
 ```
 
-The app is served at http://localhost:3000. Source files are bind-mounted, so `npm run dev`
-(nodemon) picks up server-side changes without rebuilding the image.
+Brings up the app alongside a Postgres container (with a persistent volume) and applies
+migrations automatically before starting the dev server. The app is served at
+http://localhost:3000. Source files are bind-mounted, so `npm run dev` (nodemon) picks up
+server-side changes without rebuilding the image.
 
 ## Architecture notes
 
 - Views are rendered with Nunjucks, using GOV.UK Frontend's component macros
   (`node_modules/govuk-frontend/dist`).
 - Registration answers are held in the session (`express-session`, in-memory store) for the
-  duration of the journey and cleared once a reference number is issued - there is no database.
+  duration of the journey and cleared once a reference number is issued. Sessions are never
+  persisted to Postgres - only a submitted registration is, at the moment the user submits
+  (see `src/db/registrations.js`).
+- Postgres access goes through a single hand-written-SQL data layer (`src/db/pool.js` and
+  friends) - no ORM. Schema changes are tracked with `node-pg-migrate` (`migrations/`).
 - CSRF protection (`csrf-sync`) and a nonce-based Content-Security-Policy (`helmet`) are applied
   to all routes.
