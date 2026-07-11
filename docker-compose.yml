@@ -1,0 +1,15 @@
+services:
+  web:
+    build:
+      context: .
+      target: deps
+    command: npm run dev
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      SESSION_SECRET: ${SESSION_SECRET:-dev-only-insecure-secret-change-me}
+    volumes:
+      - .:/app
+      - /app/node_modules
