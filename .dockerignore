@@ -1,0 +1,9 @@
+node_modules
+public
+coverage
+.git
+.github
+tests
+*.md
+.env
+.env.example
