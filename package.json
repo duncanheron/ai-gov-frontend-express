@@ -25,6 +25,7 @@
     "migrate:down": "node-pg-migrate down"
   },
   "dependencies": {
+    "connect-pg-simple": "^10.0.0",
     "csrf-sync": "^4.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
