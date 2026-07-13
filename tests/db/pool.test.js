@@ -6,14 +6,14 @@ describe("db pool (pg-mem test double)", () => {
     await prepareTestDatabase();
   });
 
-  it("round-trips a row through the registrations table", async () => {
+  it("round-trips a row through the applications table", async () => {
     await pool.query(
-      `INSERT INTO registrations (id, full_name, email, date_of_birth, reference, submitted_at)
+      `INSERT INTO applications (id, full_name, email, date_of_birth, reference, submitted_at)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      ["registration-1", "John Smith", "john@example.com", "1985-06-15", "REF-001", new Date()],
+      ["application-1", "John Smith", "john@example.com", "1985-06-15", "REF-001", new Date()],
     );
 
-    const result = await pool.query("SELECT * FROM registrations WHERE reference = $1", [
+    const result = await pool.query("SELECT * FROM applications WHERE reference = $1", [
       "REF-001",
     ]);
 
