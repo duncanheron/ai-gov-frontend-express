@@ -5,6 +5,7 @@ const pinoHttp = require("pino-http");
 
 const config = require("./config");
 const logger = require("./config/logger");
+const navigation = require("./config/navigation");
 const sessionMiddleware = require("./middleware/session");
 const {
   cspNonce,
@@ -41,6 +42,7 @@ function createApp() {
 
   app.use((req, res, next) => {
     res.locals.csrfToken = generateCsrfToken(req);
+    res.locals.navigationItems = navigation.forCurrentPath(req.path);
     next();
   });
 
