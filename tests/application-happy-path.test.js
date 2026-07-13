@@ -3,7 +3,7 @@ const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 
-describe("registration journey - happy path", () => {
+describe("application journey - happy path", () => {
   beforeAll(async () => {
     await prepareTestDatabase();
   });
@@ -16,12 +16,12 @@ describe("registration journey - happy path", () => {
     expect(home.status).toBe(200);
     expect(home.text).toContain("Start now");
 
-    const detailsPage = await agent.get("/register/details");
+    const detailsPage = await agent.get("/apply/details");
     expect(detailsPage.status).toBe(200);
     const detailsToken = extractCsrfToken(detailsPage.text);
     expect(detailsToken).toBeTruthy();
 
-    const submitDetails = await agent.post("/register/details").type("form").send({
+    const submitDetails = await agent.post("/apply/details").type("form").send({
       _csrf: detailsToken,
       fullName: "Ada Lovelace",
       email: "ada@example.com",
@@ -30,9 +30,9 @@ describe("registration journey - happy path", () => {
       "dateOfBirth-year": "1985",
     });
     expect(submitDetails.status).toBe(302);
-    expect(submitDetails.headers.location).toBe("/register/check-answers");
+    expect(submitDetails.headers.location).toBe("/apply/check-answers");
 
-    const checkAnswers = await agent.get("/register/check-answers");
+    const checkAnswers = await agent.get("/apply/check-answers");
     expect(checkAnswers.status).toBe(200);
     expect(checkAnswers.text).toContain("Ada Lovelace");
     expect(checkAnswers.text).toContain("ada@example.com");
@@ -40,18 +40,18 @@ describe("registration journey - happy path", () => {
     const checkAnswersToken = extractCsrfToken(checkAnswers.text);
 
     const submitFinal = await agent
-      .post("/register/check-answers")
+      .post("/apply/check-answers")
       .type("form")
       .send({ _csrf: checkAnswersToken });
     expect(submitFinal.status).toBe(302);
-    expect(submitFinal.headers.location).toBe("/register/confirmation");
+    expect(submitFinal.headers.location).toBe("/apply/confirmation");
 
-    const confirmation = await agent.get("/register/confirmation");
+    const confirmation = await agent.get("/apply/confirmation");
     expect(confirmation.status).toBe(200);
     expect(confirmation.text).toMatch(/[A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3}/);
 
-    const backToCheckAnswers = await agent.get("/register/check-answers");
+    const backToCheckAnswers = await agent.get("/apply/check-answers");
     expect(backToCheckAnswers.status).toBe(302);
-    expect(backToCheckAnswers.headers.location).toBe("/register/details");
+    expect(backToCheckAnswers.headers.location).toBe("/apply/details");
   });
 });

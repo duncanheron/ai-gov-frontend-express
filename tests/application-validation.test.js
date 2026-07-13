@@ -2,15 +2,15 @@ const request = require("supertest");
 const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 
-describe("registration journey - validation", () => {
+describe("application journey - validation", () => {
   it("shows the error summary and per-field errors for invalid input", async () => {
     const app = createApp();
     const agent = request.agent(app);
 
-    const detailsPage = await agent.get("/register/details");
+    const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
 
-    const response = await agent.post("/register/details").type("form").send({
+    const response = await agent.post("/apply/details").type("form").send({
       _csrf: token,
       fullName: "",
       email: "not-an-email",
@@ -30,11 +30,11 @@ describe("registration journey - validation", () => {
     const app = createApp();
     const agent = request.agent(app);
 
-    const checkAnswers = await agent.get("/register/check-answers");
+    const checkAnswers = await agent.get("/apply/check-answers");
     expect(checkAnswers.status).toBe(302);
-    expect(checkAnswers.headers.location).toBe("/register/details");
+    expect(checkAnswers.headers.location).toBe("/apply/details");
 
-    const confirmation = await agent.get("/register/confirmation");
+    const confirmation = await agent.get("/apply/confirmation");
     expect(confirmation.status).toBe(302);
     expect(confirmation.headers.location).toBe("/");
   });
