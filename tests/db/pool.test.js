@@ -13,9 +13,7 @@ describe("db pool (pg-mem test double)", () => {
       ["application-1", "John Smith", "john@example.com", "1985-06-15", "REF-001", new Date()],
     );
 
-    const result = await pool.query("SELECT * FROM applications WHERE reference = $1", [
-      "REF-001",
-    ]);
+    const result = await pool.query("SELECT * FROM applications WHERE reference = $1", ["REF-001"]);
 
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].full_name).toBe("John Smith");
