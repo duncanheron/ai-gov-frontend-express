@@ -1,4 +1,5 @@
 {% from "govuk/components/header/macro.njk" import govukHeader %}
+{% from "govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
 {% from "govuk/components/footer/macro.njk" import govukFooter %}
 {% from "govuk/components/skip-link/macro.njk" import govukSkipLink %}
 <!DOCTYPE html>
@@ -23,7 +24,14 @@
     {{ govukSkipLink({ href: "#main-content", text: "Skip to main content" }) }}
 
     <header role="banner">
-      {{ govukHeader({ serviceName: serviceName, serviceUrl: "/" }) }}
+      {{ govukHeader({ homepageUrl: "/" }) }}
+      {{ govukServiceNavigation({
+        serviceName: serviceName,
+        serviceUrl: "/",
+        navigation: [
+          { text: "Applications", href: "/applications" }
+        ]
+      }) }}
     </header>
 
     <div class="govuk-width-container">
