@@ -1,12 +1,12 @@
 function requireDetails(req, res, next) {
-  if (!req.session.registration || !req.session.registration.answers) {
-    return res.redirect("/register/details");
+  if (!req.session.application || !req.session.application.answers) {
+    return res.redirect("/apply/details");
   }
   return next();
 }
 
 function requireSubmission(req, res, next) {
-  if (!req.session.registration || !req.session.registration.reference) {
+  if (!req.session.application || !req.session.application.reference) {
     return res.redirect("/");
   }
   return next();

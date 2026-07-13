@@ -1,13 +1,13 @@
 const request = require("supertest");
 const createApp = require("../src/app");
-const registrations = require("../src/db/registrations");
+const applications = require("../src/db/applications");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 
-describe("registration detail page", () => {
+describe("application detail page", () => {
   beforeAll(async () => {
     await prepareTestDatabase();
 
-    await registrations.create({
+    await applications.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
       dateOfBirth: "1985-03-27",
@@ -16,10 +16,10 @@ describe("registration detail page", () => {
     });
   });
 
-  it("shows full registration details for a known reference", async () => {
+  it("shows full application details for a known reference", async () => {
     const app = createApp();
 
-    const response = await request(app).get("/registrations/TEST-DETAIL");
+    const response = await request(app).get("/applications/TEST-DETAIL");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Ada Lovelace");
@@ -32,7 +32,7 @@ describe("registration detail page", () => {
   it("returns a 404 for an unknown reference", async () => {
     const app = createApp();
 
-    const response = await request(app).get("/registrations/DOES-NOT-EXIST");
+    const response = await request(app).get("/applications/DOES-NOT-EXIST");
 
     expect(response.status).toBe(404);
   });

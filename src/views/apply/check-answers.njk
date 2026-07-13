@@ -14,25 +14,25 @@
         {
           key: { text: "Full name" },
           value: { text: answers.fullName },
-          actions: { items: [{ href: "/register/details", text: "Change", visuallyHiddenText: "full name" }] }
+          actions: { items: [{ href: "/apply/details", text: "Change", visuallyHiddenText: "full name" }] }
         },
         {
           key: { text: "Email address" },
           value: { text: answers.email },
-          actions: { items: [{ href: "/register/details", text: "Change", visuallyHiddenText: "email address" }] }
+          actions: { items: [{ href: "/apply/details", text: "Change", visuallyHiddenText: "email address" }] }
         },
         {
           key: { text: "Date of birth" },
           value: { text: dobFormatted },
-          actions: { items: [{ href: "/register/details", text: "Change", visuallyHiddenText: "date of birth" }] }
+          actions: { items: [{ href: "/apply/details", text: "Change", visuallyHiddenText: "date of birth" }] }
         }
       ]
     }) }}
 
-    <form method="post" action="/register/check-answers">
+    <form method="post" action="/apply/check-answers">
       <input type="hidden" name="_csrf" value="{{ csrfToken }}">
-      <h2 class="govuk-heading-m">Now send your registration</h2>
-      <p class="govuk-body">By submitting this registration you are confirming that, to the best of your knowledge, the details you are providing are correct.</p>
+      <h2 class="govuk-heading-m">Now send your application</h2>
+      <p class="govuk-body">By submitting this application you are confirming that, to the best of your knowledge, the details you are providing are correct.</p>
       {{ govukButton({ text: "Accept and send" }) }}
     </form>
   </div>

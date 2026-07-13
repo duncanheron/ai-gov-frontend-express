@@ -14,8 +14,8 @@ const {
 } = require("./middleware/security");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 const indexRouter = require("./routes/index");
-const registerRouter = require("./routes/register");
-const registrationsRouter = require("./routes/registrations");
+const applyRouter = require("./routes/apply");
+const applicationsRouter = require("./routes/applications");
 
 function createApp() {
   const app = express();
@@ -28,7 +28,7 @@ function createApp() {
     express: app,
     watch: !config.isProduction && !config.isTest,
   });
-  nunjucksEnv.addGlobal("serviceName", "Register your details");
+  nunjucksEnv.addGlobal("serviceName", "Submit your application");
   app.set("view engine", "njk");
 
   app.use(pinoHttp({ logger }));
@@ -49,8 +49,8 @@ function createApp() {
   });
 
   app.use("/", indexRouter);
-  app.use("/register", registerRouter);
-  app.use("/registrations", registrationsRouter);
+  app.use("/apply", applyRouter);
+  app.use("/applications", applicationsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
