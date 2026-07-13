@@ -1,15 +1,15 @@
-const registrations = require("../../src/db/registrations");
+const applications = require("../../src/db/applications");
 const { prepareTestDatabase } = require("../helpers/prepareTestDatabase");
 
-describe("registrations data module", () => {
+describe("applications data module", () => {
   beforeAll(async () => {
     await prepareTestDatabase();
   });
 
-  it("creates a registration then fetches it back by reference", async () => {
+  it("creates an application then fetches it back by reference", async () => {
     const submittedAt = new Date();
 
-    const created = await registrations.create({
+    const created = await applications.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
       dateOfBirth: "1985-03-27",
@@ -19,7 +19,7 @@ describe("registrations data module", () => {
 
     expect(created.reference).toBe("TEST-001");
 
-    const found = await registrations.get("TEST-001");
+    const found = await applications.get("TEST-001");
 
     expect(found).not.toBeNull();
     expect(found.full_name).toBe("Ada Lovelace");
@@ -28,7 +28,7 @@ describe("registrations data module", () => {
   });
 
   it("returns null for an unknown reference", async () => {
-    const found = await registrations.get("DOES-NOT-EXIST");
+    const found = await applications.get("DOES-NOT-EXIST");
 
     expect(found).toBeNull();
   });
