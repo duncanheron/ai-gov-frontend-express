@@ -32,25 +32,25 @@ describe("accessibility", () => {
     await expectNoViolations(response.text);
   });
 
-  it("registrations list page (empty) has no automatically detectable accessibility violations", async () => {
+  it("applications list page (empty) has no automatically detectable accessibility violations", async () => {
     const app = createApp();
-    const response = await request(app).get("/registrations");
+    const response = await request(app).get("/applications");
     await expectNoViolations(response.text);
   });
 
   it("details page (empty) has no automatically detectable accessibility violations", async () => {
     const app = createApp();
-    const response = await request(app).get("/register/details");
+    const response = await request(app).get("/apply/details");
     await expectNoViolations(response.text);
   });
 
   it("details page with validation errors has no automatically detectable accessibility violations", async () => {
     const app = createApp();
     const agent = request.agent(app);
-    const detailsPage = await agent.get("/register/details");
+    const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
 
-    const response = await agent.post("/register/details").type("form").send({ _csrf: token });
+    const response = await agent.post("/apply/details").type("form").send({ _csrf: token });
     await expectNoViolations(response.text);
   });
 
@@ -58,9 +58,9 @@ describe("accessibility", () => {
     const app = createApp();
     const agent = request.agent(app);
 
-    const detailsPage = await agent.get("/register/details");
+    const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
-    await agent.post("/register/details").type("form").send({
+    await agent.post("/apply/details").type("form").send({
       _csrf: detailsToken,
       fullName: "Ada Lovelace",
       email: "ada@example.com",
@@ -69,12 +69,12 @@ describe("accessibility", () => {
       "dateOfBirth-year": "1985",
     });
 
-    const checkAnswers = await agent.get("/register/check-answers");
+    const checkAnswers = await agent.get("/apply/check-answers");
     await expectNoViolations(checkAnswers.text);
     const checkAnswersToken = extractCsrfToken(checkAnswers.text);
 
-    await agent.post("/register/check-answers").type("form").send({ _csrf: checkAnswersToken });
-    const confirmation = await agent.get("/register/confirmation");
+    await agent.post("/apply/check-answers").type("form").send({ _csrf: checkAnswersToken });
+    const confirmation = await agent.get("/apply/confirmation");
     await expectNoViolations(confirmation.text);
   });
 
@@ -84,13 +84,13 @@ describe("accessibility", () => {
     await expectNoViolations(response.text);
   });
 
-  it("registrations list page (with rows) has no automatically detectable accessibility violations", async () => {
+  it("applications list page (with rows) has no automatically detectable accessibility violations", async () => {
     const app = createApp();
     const agent = request.agent(app);
 
-    const detailsPage = await agent.get("/register/details");
+    const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
-    await agent.post("/register/details").type("form").send({
+    await agent.post("/apply/details").type("form").send({
       _csrf: detailsToken,
       fullName: "Ada Lovelace",
       email: "ada@example.com",
@@ -98,21 +98,21 @@ describe("accessibility", () => {
       "dateOfBirth-month": "3",
       "dateOfBirth-year": "1985",
     });
-    const checkAnswers = await agent.get("/register/check-answers");
+    const checkAnswers = await agent.get("/apply/check-answers");
     const checkAnswersToken = extractCsrfToken(checkAnswers.text);
-    await agent.post("/register/check-answers").type("form").send({ _csrf: checkAnswersToken });
+    await agent.post("/apply/check-answers").type("form").send({ _csrf: checkAnswersToken });
 
-    const response = await agent.get("/registrations");
+    const response = await agent.get("/applications");
     await expectNoViolations(response.text);
   });
 
-  it("registration detail page has no automatically detectable accessibility violations", async () => {
+  it("application detail page has no automatically detectable accessibility violations", async () => {
     const app = createApp();
     const agent = request.agent(app);
 
-    const detailsPage = await agent.get("/register/details");
+    const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
-    await agent.post("/register/details").type("form").send({
+    await agent.post("/apply/details").type("form").send({
       _csrf: detailsToken,
       fullName: "Ada Lovelace",
       email: "ada@example.com",
@@ -120,19 +120,19 @@ describe("accessibility", () => {
       "dateOfBirth-month": "3",
       "dateOfBirth-year": "1985",
     });
-    const checkAnswers = await agent.get("/register/check-answers");
+    const checkAnswers = await agent.get("/apply/check-answers");
     const checkAnswersToken = extractCsrfToken(checkAnswers.text);
-    await agent.post("/register/check-answers").type("form").send({ _csrf: checkAnswersToken });
-    const confirmation = await agent.get("/register/confirmation");
+    await agent.post("/apply/check-answers").type("form").send({ _csrf: checkAnswersToken });
+    const confirmation = await agent.get("/apply/confirmation");
     const [, reference] = confirmation.text.match(/([A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3})/);
 
-    const response = await agent.get(`/registrations/${reference}`);
+    const response = await agent.get(`/applications/${reference}`);
     await expectNoViolations(response.text);
   });
 
-  it("registration detail page 404 has no automatically detectable accessibility violations", async () => {
+  it("application detail page 404 has no automatically detectable accessibility violations", async () => {
     const app = createApp();
-    const response = await request(app).get("/registrations/DOES-NOT-EXIST");
+    const response = await request(app).get("/applications/DOES-NOT-EXIST");
     await expectNoViolations(response.text);
   });
 });
