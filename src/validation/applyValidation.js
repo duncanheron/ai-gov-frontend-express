@@ -82,4 +82,31 @@ function validateDetails(body) {
   return { values, errors, fieldErrors, dateErrorParts, isValid: errors.length === 0 };
 }
 
-module.exports = { validateDetails };
+const PREFERENCE_OPTIONS = [
+  { value: "food", text: "Food" },
+  { value: "animals", text: "Animals" },
+  { value: "ai", text: "Artificial intelligence (AI)" },
+];
+
+function validatePreferences(body) {
+  const raw = body.preferences;
+  const preferences = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
+
+  return {
+    values: { preferences },
+    errors: [],
+    fieldErrors: {},
+    dateErrorParts: {},
+    isValid: true,
+  };
+}
+
+function preferenceLabels(preferences) {
+  if (!preferences || preferences.length === 0) {
+    return "None selected";
+  }
+  const labelByValue = new Map(PREFERENCE_OPTIONS.map((option) => [option.value, option.text]));
+  return preferences.map((value) => labelByValue.get(value) || value).join(", ");
+}
+
+module.exports = { validateDetails, validatePreferences, PREFERENCE_OPTIONS, preferenceLabels };
