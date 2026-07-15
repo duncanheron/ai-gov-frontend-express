@@ -54,6 +54,25 @@ describe("accessibility", () => {
     await expectNoViolations(response.text);
   });
 
+  it("preferences page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const preferencesPage = await agent.get("/apply/preferences");
+    await expectNoViolations(preferencesPage.text);
+  });
+
   it("check answers and confirmation pages have no automatically detectable accessibility violations", async () => {
     const app = createApp();
     const agent = request.agent(app);
@@ -68,6 +87,13 @@ describe("accessibility", () => {
       "dateOfBirth-month": "3",
       "dateOfBirth-year": "1985",
     });
+
+    const preferencesPage = await agent.get("/apply/preferences");
+    const preferencesToken = extractCsrfToken(preferencesPage.text);
+    await agent
+      .post("/apply/preferences")
+      .type("form")
+      .send({ _csrf: preferencesToken, preferences: ["food", "ai"] });
 
     const checkAnswers = await agent.get("/apply/check-answers");
     await expectNoViolations(checkAnswers.text);
@@ -98,6 +124,10 @@ describe("accessibility", () => {
       "dateOfBirth-month": "3",
       "dateOfBirth-year": "1985",
     });
+    const preferencesPage = await agent.get("/apply/preferences");
+    const preferencesToken = extractCsrfToken(preferencesPage.text);
+    await agent.post("/apply/preferences").type("form").send({ _csrf: preferencesToken });
+
     const checkAnswers = await agent.get("/apply/check-answers");
     const checkAnswersToken = extractCsrfToken(checkAnswers.text);
     await agent.post("/apply/check-answers").type("form").send({ _csrf: checkAnswersToken });
@@ -120,6 +150,10 @@ describe("accessibility", () => {
       "dateOfBirth-month": "3",
       "dateOfBirth-year": "1985",
     });
+    const preferencesPage = await agent.get("/apply/preferences");
+    const preferencesToken = extractCsrfToken(preferencesPage.text);
+    await agent.post("/apply/preferences").type("form").send({ _csrf: preferencesToken });
+
     const checkAnswers = await agent.get("/apply/check-answers");
     const checkAnswersToken = extractCsrfToken(checkAnswers.text);
     await agent.post("/apply/check-answers").type("form").send({ _csrf: checkAnswersToken });

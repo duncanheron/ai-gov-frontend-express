@@ -1,10 +1,12 @@
 {% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block pageTitle %}Check your answers{% endblock %}
 
 {% block content %}
+{{ govukBackLink({ text: "Back", href: "/apply/preferences" }) }}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-xl">Check your answers</h1>
@@ -25,6 +27,11 @@
           key: { text: "Date of birth" },
           value: { text: dobFormatted },
           actions: { items: [{ href: "/apply/details", text: "Change", visuallyHiddenText: "date of birth" }] }
+        },
+        {
+          key: { text: "Preferences" },
+          value: { text: preferencesLabel },
+          actions: { items: [{ href: "/apply/preferences", text: "Change", visuallyHiddenText: "preferences" }] }
         }
       ]
     }) }}

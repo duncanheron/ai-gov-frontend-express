@@ -5,6 +5,13 @@ function requireDetails(req, res, next) {
   return next();
 }
 
+function requirePreferences(req, res, next) {
+  if (!req.session.application || !Array.isArray(req.session.application.answers?.preferences)) {
+    return res.redirect("/apply/preferences");
+  }
+  return next();
+}
+
 function requireSubmission(req, res, next) {
   if (!req.session.application || !req.session.application.reference) {
     return res.redirect("/");
@@ -12,4 +19,4 @@ function requireSubmission(req, res, next) {
   return next();
 }
 
-module.exports = { requireDetails, requireSubmission };
+module.exports = { requireDetails, requirePreferences, requireSubmission };
