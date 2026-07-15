@@ -27,6 +27,24 @@ describe("application detail page", () => {
     expect(response.text).toContain("27/03/1985");
     expect(response.text).toContain("TEST-DETAIL");
     expect(response.text).toContain("02/01/2026");
+    expect(response.text).toContain("None selected");
+  });
+
+  it("shows selected preferences as human-readable labels", async () => {
+    await applications.create({
+      fullName: "Grace Hopper",
+      email: "grace@example.com",
+      dateOfBirth: "1906-12-09",
+      reference: "TEST-DETAIL-PREFS",
+      submittedAt: new Date("2026-01-03T09:00:00.000Z"),
+      preferences: ["food", "ai"],
+    });
+
+    const app = createApp();
+    const response = await request(app).get("/applications/TEST-DETAIL-PREFS");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Food, Artificial intelligence (AI)");
   });
 
   it("returns a 404 for an unknown reference", async () => {

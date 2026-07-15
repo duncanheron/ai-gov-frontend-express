@@ -1,6 +1,7 @@
 const express = require("express");
 
 const applications = require("../db/applications");
+const { preferenceLabels } = require("../validation/applyValidation");
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.get("/:reference", async (req, res, next) => {
     dateOfBirthFormatted: formatDate(application.date_of_birth),
     reference: application.reference,
     submittedAtFormatted: formatDate(application.submitted_at),
+    preferencesLabel: preferenceLabels(application.preferences),
   });
 });
 
