@@ -61,4 +61,36 @@ describe("applications data module", () => {
 
     expect(found.preferences).toEqual([]);
   });
+
+  it("creates an application with a flow and flow answer and reads them back", async () => {
+    await applications.create({
+      fullName: "Katherine Johnson",
+      email: "katherine@example.com",
+      dateOfBirth: "1918-08-26",
+      reference: "TEST-FLOW",
+      submittedAt: new Date(),
+      flow: "housing",
+      flowAnswer: "yes",
+    });
+
+    const found = await applications.get("TEST-FLOW");
+
+    expect(found.flow).toBe("housing");
+    expect(found.flow_answer).toBe("yes");
+  });
+
+  it("defaults flow to 'standard' and flow_answer to null when not provided", async () => {
+    await applications.create({
+      fullName: "Rosalind Franklin",
+      email: "rosalind@example.com",
+      dateOfBirth: "1920-07-25",
+      reference: "TEST-NO-FLOW",
+      submittedAt: new Date(),
+    });
+
+    const found = await applications.get("TEST-NO-FLOW");
+
+    expect(found.flow).toBe("standard");
+    expect(found.flow_answer).toBeNull();
+  });
 });
