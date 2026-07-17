@@ -22,11 +22,12 @@ Not sure which service you need?
       <h1 class="govuk-heading-xl">We recommend: {{ label }}</h1>
       <p class="govuk-body">Based on what you told us, this looks like the right service for you.</p>
       {{ govukButton({ text: "Continue to " + label, href: href }) }}
+      <p class="govuk-body"><a class="govuk-link" href="/choose-service/start-again">Not the right service? Start again</a></p>
 
     {% elif view == "error" %}
       <h1 class="govuk-heading-xl">Sorry, there is a problem</h1>
       <p class="govuk-body">Something went wrong. Try again, or use the homepage to choose a service directly.</p>
-      <p class="govuk-body"><a class="govuk-link" href="/choose-service">Try again</a></p>
+      <p class="govuk-body"><a class="govuk-link" href="/choose-service/start-again">Try again</a></p>
       <p class="govuk-body"><a class="govuk-link" href="/">Return to the homepage</a></p>
 
     {% else %}
