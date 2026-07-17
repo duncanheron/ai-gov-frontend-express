@@ -18,6 +18,7 @@ const indexRouter = require("./routes/index");
 const applyRouter = require("./routes/apply");
 const applyHousingRouter = require("./routes/applyHousing");
 const applyHousingBenefitRouter = require("./routes/applyHousingBenefit");
+const chooseServiceRouter = require("./routes/chooseService");
 const applicationsRouter = require("./routes/applications");
 
 function createApp() {
@@ -56,6 +57,7 @@ function createApp() {
   app.use("/apply", applyRouter);
   app.use("/apply-housing", applyHousingRouter);
   app.use("/apply-housing-benefit", applyHousingBenefitRouter);
+  app.use("/choose-service", chooseServiceRouter);
   app.use("/applications", applicationsRouter);
 
   app.use(notFoundHandler);
