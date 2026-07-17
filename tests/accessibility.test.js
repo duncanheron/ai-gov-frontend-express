@@ -169,4 +169,279 @@ describe("accessibility", () => {
     const response = await request(app).get("/applications/DOES-NOT-EXIST");
     await expectNoViolations(response.text);
   });
+
+  it("housing details page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const response = await request(app).get("/apply-housing/details");
+    await expectNoViolations(response.text);
+  });
+
+  it("housing details page with validation errors has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    const detailsPage = await agent.get("/apply-housing/details");
+    const token = extractCsrfToken(detailsPage.text);
+
+    const response = await agent.post("/apply-housing/details").type("form").send({ _csrf: token });
+    await expectNoViolations(response.text);
+  });
+
+  it("housing situation page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const situationPage = await agent.get("/apply-housing/situation");
+    await expectNoViolations(situationPage.text);
+  });
+
+  it("housing situation page with validation errors has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const situationPage = await agent.get("/apply-housing/situation");
+    const situationToken = extractCsrfToken(situationPage.text);
+    const response = await agent
+      .post("/apply-housing/situation")
+      .type("form")
+      .send({ _csrf: situationToken });
+    await expectNoViolations(response.text);
+  });
+
+  it("housing check answers page has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const situationPage = await agent.get("/apply-housing/situation");
+    const situationToken = extractCsrfToken(situationPage.text);
+    await agent
+      .post("/apply-housing/situation")
+      .type("form")
+      .send({ _csrf: situationToken, situation: "renting-privately" });
+
+    const checkAnswers = await agent.get("/apply-housing/check-answers");
+    await expectNoViolations(checkAnswers.text);
+  });
+
+  it("housing confirmation page has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const situationPage = await agent.get("/apply-housing/situation");
+    const situationToken = extractCsrfToken(situationPage.text);
+    await agent
+      .post("/apply-housing/situation")
+      .type("form")
+      .send({ _csrf: situationToken, situation: "renting-privately" });
+
+    const checkAnswers = await agent.get("/apply-housing/check-answers");
+    const checkAnswersToken = extractCsrfToken(checkAnswers.text);
+    await agent
+      .post("/apply-housing/check-answers")
+      .type("form")
+      .send({ _csrf: checkAnswersToken });
+
+    const confirmation = await agent.get("/apply-housing/confirmation");
+    await expectNoViolations(confirmation.text);
+  });
+
+  it("housing benefit details page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const response = await request(app).get("/apply-housing-benefit/details");
+    await expectNoViolations(response.text);
+  });
+
+  it("housing benefit details page with validation errors has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    const detailsPage = await agent.get("/apply-housing-benefit/details");
+    const token = extractCsrfToken(detailsPage.text);
+
+    const response = await agent
+      .post("/apply-housing-benefit/details")
+      .type("form")
+      .send({ _csrf: token });
+    await expectNoViolations(response.text);
+  });
+
+  it("housing benefit disability details page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing-benefit/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing-benefit/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const disabilityDetailsPage = await agent.get("/apply-housing-benefit/disability-details");
+    await expectNoViolations(disabilityDetailsPage.text);
+  });
+
+  it("housing benefit disability details page with validation errors has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing-benefit/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing-benefit/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const disabilityDetailsPage = await agent.get("/apply-housing-benefit/disability-details");
+    const disabilityDetailsToken = extractCsrfToken(disabilityDetailsPage.text);
+    const response = await agent
+      .post("/apply-housing-benefit/disability-details")
+      .type("form")
+      .send({ _csrf: disabilityDetailsToken, disabilityDetails: "" });
+    await expectNoViolations(response.text);
+  });
+
+  it("housing benefit check answers page has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing-benefit/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing-benefit/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const disabilityDetailsPage = await agent.get("/apply-housing-benefit/disability-details");
+    const disabilityDetailsToken = extractCsrfToken(disabilityDetailsPage.text);
+    await agent.post("/apply-housing-benefit/disability-details").type("form").send({
+      _csrf: disabilityDetailsToken,
+      disabilityDetails: "I use a wheelchair and need step-free access.",
+    });
+
+    const checkAnswers = await agent.get("/apply-housing-benefit/check-answers");
+    await expectNoViolations(checkAnswers.text);
+  });
+
+  it("housing benefit confirmation page has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing-benefit/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing-benefit/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    const disabilityDetailsPage = await agent.get("/apply-housing-benefit/disability-details");
+    const disabilityDetailsToken = extractCsrfToken(disabilityDetailsPage.text);
+    await agent.post("/apply-housing-benefit/disability-details").type("form").send({
+      _csrf: disabilityDetailsToken,
+      disabilityDetails: "I use a wheelchair and need step-free access.",
+    });
+
+    const checkAnswers = await agent.get("/apply-housing-benefit/check-answers");
+    const checkAnswersToken = extractCsrfToken(checkAnswers.text);
+    await agent
+      .post("/apply-housing-benefit/check-answers")
+      .type("form")
+      .send({ _csrf: checkAnswersToken });
+
+    const confirmation = await agent.get("/apply-housing-benefit/confirmation");
+    await expectNoViolations(confirmation.text);
+  });
+
+  it("choose service ask page has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const response = await request(app).get("/choose-service");
+    await expectNoViolations(response.text);
+  });
+
+  it("choose service clarifying question page has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I need some help" });
+
+    const clarifyPage = await agent.get("/choose-service");
+    await expectNoViolations(clarifyPage.text);
+  });
+
+  it("choose service result page has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to apply for housing" });
+
+    const resultPage = await agent.get("/choose-service");
+    await expectNoViolations(resultPage.text);
+  });
 });
