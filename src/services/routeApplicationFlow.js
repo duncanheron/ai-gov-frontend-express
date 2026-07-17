@@ -19,11 +19,35 @@ const MAX_CLARIFICATION_ROUNDS = 1;
 async function routeApplicationFlow(messages) {
   if (config.isTest) {
     const lastUserMessage = messages[messages.length - 1].content;
-    return {
-      decided: true,
-      flow: /disab/i.test(lastUserMessage) ? "housing-benefit-disability" : "housing",
-      clarifyingQuestion: null,
-    };
+    const userTurns = messages.filter((message) => message.role === "user").length;
+
+    // Test-only trigger for simulating an AI Gateway failure (e.g. from the
+    // choose-service route's error-handling tests) - not a real phrase a user
+    // would type.
+    if (/^simulate-ai-failure$/i.test(lastUserMessage.trim())) {
+      throw new Error("Simulated AI Gateway failure (test-only trigger)");
+    }
+
+    if (/disab/i.test(lastUserMessage)) {
+      return { decided: true, flow: "housing-benefit-disability", clarifyingQuestion: null };
+    }
+    if (/hous|home|rent/i.test(lastUserMessage)) {
+      return { decided: true, flow: "housing", clarifyingQuestion: null };
+    }
+
+    // Genuinely ambiguous (matches neither flow's keywords): ask a clarifying
+    // question once, mirroring the real branch's MAX_CLARIFICATION_ROUNDS
+    // behaviour, then force a decision.
+    if (userTurns <= MAX_CLARIFICATION_ROUNDS) {
+      return {
+        decided: false,
+        flow: null,
+        clarifyingQuestion:
+          "Are you applying because of a disability, or is this a general housing application?",
+      };
+    }
+
+    return { decided: true, flow: "housing", clarifyingQuestion: null };
   }
 
   const userTurns = messages.filter((message) => message.role === "user").length;

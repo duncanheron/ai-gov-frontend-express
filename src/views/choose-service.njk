@@ -1,0 +1,54 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block pageTitle %}
+{%- if view == "result" -%}
+We recommend: {{ label }}
+{%- elif view == "error" -%}
+Sorry, there is a problem
+{%- elif view == "clarify" -%}
+{{ question }}
+{%- else -%}
+Not sure which service you need?
+{%- endif -%}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if view == "result" %}
+      <h1 class="govuk-heading-xl">We recommend: {{ label }}</h1>
+      <p class="govuk-body">Based on what you told us, this looks like the right service for you.</p>
+      {{ govukButton({ text: "Continue to " + label, href: href }) }}
+
+    {% elif view == "error" %}
+      <h1 class="govuk-heading-xl">Sorry, there is a problem</h1>
+      <p class="govuk-body">Something went wrong. Try again, or use the homepage to choose a service directly.</p>
+      <p class="govuk-body"><a class="govuk-link" href="/choose-service">Try again</a></p>
+      <p class="govuk-body"><a class="govuk-link" href="/">Return to the homepage</a></p>
+
+    {% else %}
+      <form method="post" action="/choose-service" novalidate>
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+        {{ govukCharacterCount({
+          id: "description",
+          name: "description",
+          maxlength: 500,
+          label: {
+            text: question if view == "clarify" else "Not sure which service you need? Tell us what you'd like to do",
+            isPageHeading: true,
+            classes: "govuk-label--xl"
+          },
+          hint: { text: "For example, \"I want to apply for housing\" or \"I need housing benefit because of my disability\"." } if view != "clarify" else undefined
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

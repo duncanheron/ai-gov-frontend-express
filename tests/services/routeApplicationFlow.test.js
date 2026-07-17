@@ -73,4 +73,30 @@ describe("routeApplicationFlow", () => {
     expect(result.decided).toBe(true);
     expect(result.clarifyingQuestion).toBeNull();
   });
+
+  it("asks a clarifying question for a message matching neither flow's keywords", async () => {
+    const result = await routeApplicationFlow([{ role: "user", content: "I need some help" }]);
+
+    expect(result.decided).toBe(false);
+    expect(result.flow).toBeNull();
+    expect(result.clarifyingQuestion).toEqual(expect.any(String));
+  });
+
+  it("decides once a housing/disability keyword appears, even after a clarifying round", async () => {
+    const messages = [
+      { role: "user", content: "I need some help" },
+      { role: "assistant", content: "Can you tell me more?" },
+      { role: "user", content: "just a regular housing application" },
+    ];
+
+    const result = await routeApplicationFlow(messages);
+
+    expect(result).toEqual({ decided: true, flow: "housing", clarifyingQuestion: null });
+  });
+
+  it("throws when given the test-only failure trigger", async () => {
+    await expect(
+      routeApplicationFlow([{ role: "user", content: "simulate-ai-failure" }]),
+    ).rejects.toThrow();
+  });
 });
