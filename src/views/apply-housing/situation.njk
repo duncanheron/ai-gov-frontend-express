@@ -1,0 +1,21 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% block pageTitle %}{% if errors.length %}Error: {% endif %}What's your current housing situation?{% endblock %}
+{% block content %}
+{{ govukBackLink({ text: "Back", href: "/apply-housing/details" }) }}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errors.length %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
+    {% endif %}
+    <form method="post" action="/apply-housing/situation" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+      {{ govukRadios({ idPrefix: "situation", name: "situation", fieldset: { legend: { text: "What's your current housing situation?", isPageHeading: true, classes: "govuk-fieldset__legend--xl" } }, errorMessage: { text: fieldErrors.situation } if fieldErrors.situation else undefined, items: items }) }}
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}
