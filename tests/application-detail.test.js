@@ -47,6 +47,53 @@ describe("application detail page", () => {
     expect(response.text).toContain("Food, Artificial intelligence (AI)");
   });
 
+  it("shows the housing situation for a housing flow application", async () => {
+    await applications.create({
+      fullName: "Rosalind Franklin",
+      email: "rosalind@example.com",
+      dateOfBirth: "1920-07-25",
+      reference: "TEST-DETAIL-HOUSING",
+      submittedAt: new Date("2026-01-04T09:00:00.000Z"),
+      flow: "housing",
+      flowAnswer: "Renting privately",
+    });
+
+    const app = createApp();
+    const response = await request(app).get("/applications/TEST-DETAIL-HOUSING");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Housing situation");
+    expect(response.text).toContain("Renting privately");
+  });
+
+  it("shows the disability details for a housing benefit disability flow application", async () => {
+    await applications.create({
+      fullName: "Dorothy Hodgkin",
+      email: "dorothy@example.com",
+      dateOfBirth: "1910-05-12",
+      reference: "TEST-DETAIL-DISABILITY",
+      submittedAt: new Date("2026-01-05T09:00:00.000Z"),
+      flow: "housing-benefit-disability",
+      flowAnswer: "Some disability details text",
+    });
+
+    const app = createApp();
+    const response = await request(app).get("/applications/TEST-DETAIL-DISABILITY");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Disability details");
+    expect(response.text).toContain("Some disability details text");
+  });
+
+  it("shows no flow-specific row for a standard flow application", async () => {
+    const app = createApp();
+    const response = await request(app).get("/applications/TEST-DETAIL");
+
+    expect(response.status).toBe(200);
+    expect(response.text).not.toContain("Housing situation");
+    expect(response.text).not.toContain("Disability details");
+  });
+
   it("returns a 404 for an unknown reference", async () => {
     const app = createApp();
 
