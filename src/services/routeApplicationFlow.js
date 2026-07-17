@@ -53,11 +53,14 @@ async function routeApplicationFlow(messages) {
   const userTurns = messages.filter((message) => message.role === "user").length;
   const mustDecide = userTurns > MAX_CLARIFICATION_ROUNDS;
 
-  // Required lazily: "ai" ships ESM-only with no CommonJS build, which Jest's
-  // default transform can't parse. Requiring it here (rather than at module
+  // Imported lazily: "ai" ships ESM-only with no CommonJS build, which Jest's
+  // default transform can't parse. Importing it here (rather than at module
   // load time) means this line is only ever reached outside config.isTest,
-  // so the test suite never has to load it.
-  const { generateText, Output } = require("ai");
+  // so the test suite never has to load it. A dynamic import (rather than
+  // require) is required for this to actually work in Vercel's Function
+  // runtime, which doesn't support require()-ing an ESM-only package even
+  // though a plain local Node process does.
+  const { generateText, Output } = await import("ai");
 
   const { output } = await generateText({
     model: "anthropic/claude-haiku-4.5",
