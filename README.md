@@ -44,6 +44,11 @@ migrations automatically before starting the dev server. The app is served at
 http://localhost:3000. Source files are bind-mounted, so `npm run dev` (nodemon) picks up
 server-side changes without rebuilding the image.
 
+The `web` service also loads an optional `.env.local` file if present. For the AI-assisted service
+picker (`/choose-service`) to return real recommendations rather than its graceful fallback error
+page, make sure an `AI_GATEWAY_API_KEY` or a `vercel env pull`-sourced `VERCEL_OIDC_TOKEN` is
+available there.
+
 ## Architecture notes
 
 - Views are rendered with Nunjucks, using GOV.UK Frontend's component macros

@@ -6,6 +6,9 @@ services:
     command: sh -c "npm run migrate:up && npm run dev"
     ports:
       - "${PORT:-3000}:3000"
+    env_file:
+      - path: .env.local
+        required: false
     environment:
       NODE_ENV: development
       PORT: 3000
