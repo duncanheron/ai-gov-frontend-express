@@ -1,0 +1,25 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% block pageTitle %}Check your answers{% endblock %}
+{% block content %}
+{{ govukBackLink({ text: "Back", href: "/apply-housing/situation" }) }}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">Check your answers</h1>
+    {{ govukSummaryList({ rows: [
+      { key: { text: "Full name" }, value: { text: answers.fullName }, actions: { items: [{ href: "/apply-housing/details", text: "Change", visuallyHiddenText: "full name" }] } },
+      { key: { text: "Email address" }, value: { text: answers.email }, actions: { items: [{ href: "/apply-housing/details", text: "Change", visuallyHiddenText: "email address" }] } },
+      { key: { text: "Date of birth" }, value: { text: dobFormatted }, actions: { items: [{ href: "/apply-housing/details", text: "Change", visuallyHiddenText: "date of birth" }] } },
+      { key: { text: "Housing situation" }, value: { text: situationLabel }, actions: { items: [{ href: "/apply-housing/situation", text: "Change", visuallyHiddenText: "housing situation" }] } }
+    ] }) }}
+    <form method="post" action="/apply-housing/check-answers">
+      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+      <h2 class="govuk-heading-m">Now send your application</h2>
+      <p class="govuk-body">By submitting this application you are confirming that, to the best of your knowledge, the details you are providing are correct.</p>
+      {{ govukButton({ text: "Accept and send" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

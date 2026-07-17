@@ -1,0 +1,13 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% block pageTitle %}Application complete{% endblock %}
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {{ govukPanel({ titleText: "Application complete", html: "Your reference number<br><strong>" + reference + "</strong>" }) }}
+    <h2 class="govuk-heading-m">What happens next</h2>
+    <p class="govuk-body">We have received your housing application. Keep a note of your reference number in case you need to contact us about it.</p>
+    <p class="govuk-body"><a class="govuk-link" href="/">Return to the start page</a></p>
+  </div>
+</div>
+{% endblock %}
