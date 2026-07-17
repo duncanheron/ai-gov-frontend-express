@@ -90,7 +90,73 @@ describe("choose service (AI picker)", () => {
 
     expect(submit.status).toBe(503);
     expect(submit.text).toContain("Sorry, there is a problem");
-    expect(submit.text).toContain('href="/choose-service"');
+    expect(submit.text).toContain('href="/choose-service/start-again"');
     expect(submit.text).toContain('href="/"');
+  });
+
+  it("lets you start again after reaching a decision, and reach an independent new recommendation", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to apply for housing" });
+
+    const firstResult = await agent.get("/choose-service");
+    expect(firstResult.text).toContain("Housing");
+    expect(firstResult.text).toContain('href="/choose-service/start-again"');
+
+    const startAgain = await agent.get("/choose-service/start-again");
+    expect(startAgain.status).toBe(302);
+    expect(startAgain.headers.location).toBe("/choose-service");
+
+    const freshAskPage = await agent.get("/choose-service");
+    expect(freshAskPage.status).toBe(200);
+    expect(freshAskPage.text).toContain("Not sure which service you need");
+    const freshToken = extractCsrfToken(freshAskPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: freshToken, description: "I need housing benefit because of my disability" });
+
+    const secondResult = await agent.get("/choose-service");
+    expect(secondResult.text).toContain("Housing Benefit (disability)");
+    expect(secondResult.text).toContain('href="/apply-housing-benefit/details"');
+  });
+
+  it("recovers via start-again from an AI failure that happened after an earlier decision", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to apply for housing" });
+
+    const decided = await agent.get("/choose-service");
+    expect(decided.text).toContain("Housing");
+
+    // The "result" view has no form of its own (just a "Continue" button and
+    // links), so there's no fresh CSRF token to scrape from it - reuse the
+    // token from the initial ask page, which stays valid for the session.
+    const failedRetry = await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "simulate-ai-failure" });
+    expect(failedRetry.status).toBe(503);
+    expect(failedRetry.text).toContain('href="/choose-service/start-again"');
+
+    const startAgain = await agent.get("/choose-service/start-again");
+    expect(startAgain.status).toBe(302);
+
+    const freshAskPage = await agent.get("/choose-service");
+    expect(freshAskPage.text).toContain("Not sure which service you need");
+    expect(freshAskPage.text).not.toContain("We recommend");
   });
 });

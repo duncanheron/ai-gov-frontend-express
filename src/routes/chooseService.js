@@ -35,6 +35,11 @@ router.get("/", (req, res) => {
   res.render("choose-service.njk", chooseServiceViewModel(req.session.chooseService));
 });
 
+router.get("/start-again", (req, res) => {
+  delete req.session.chooseService;
+  res.redirect("/choose-service");
+});
+
 router.post("/", async (req, res) => {
   const description = (req.body.description || "").trim();
   const existingState = req.session.chooseService;
