@@ -10,6 +10,11 @@ function formatDate(date) {
   return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
 }
 
+const flowAnswerLabels = {
+  housing: "Housing situation",
+  "housing-benefit-disability": "Disability details",
+};
+
 router.get("/", async (req, res) => {
   const allApplications = await applications.list();
 
@@ -31,6 +36,8 @@ router.get("/:reference", async (req, res, next) => {
     return next();
   }
 
+  const flowAnswerLabel = flowAnswerLabels[application.flow];
+
   res.render("applications/detail.njk", {
     fullName: application.full_name,
     email: application.email,
@@ -38,6 +45,8 @@ router.get("/:reference", async (req, res, next) => {
     reference: application.reference,
     submittedAtFormatted: formatDate(application.submitted_at),
     preferencesLabel: preferenceLabels(application.preferences),
+    flowAnswerLabel,
+    flowAnswer: flowAnswerLabel ? application.flow_answer : undefined,
   });
 });
 
