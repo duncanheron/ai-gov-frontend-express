@@ -14,7 +14,7 @@ describe("application journey - happy path", () => {
 
     const home = await agent.get("/");
     expect(home.status).toBe(200);
-    expect(home.text).toContain("Start now");
+    expect(home.text).toContain('href="/apply/details"');
 
     const detailsPage = await agent.get("/apply/details");
     expect(detailsPage.status).toBe(200);
