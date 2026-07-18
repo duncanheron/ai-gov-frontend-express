@@ -1,15 +1,12 @@
 const express = require("express");
 
-const { routeApplicationFlow } = require("../services/routeApplicationFlow");
+const { routeApplicationFlow, FLOW_DEFINITIONS } = require("../services/routeApplicationFlow");
 
 const router = express.Router();
 
-const FLOW_DETAILS = {
-  housing: { label: "Housing", href: "/apply-housing/details" },
-  "housing-benefit-disability": {
-    label: "Housing Benefit (disability)",
-    href: "/apply-housing-benefit/details",
-  },
+const FLOW_HREFS = {
+  housing: "/apply-housing/details",
+  "housing-benefit-disability": "/apply-housing-benefit/details",
 };
 
 function chooseServiceViewModel(state) {
@@ -17,8 +14,12 @@ function chooseServiceViewModel(state) {
     return { view: "ask" };
   }
 
+  if (state.decided && state.flow) {
+    return { view: "result", ...FLOW_DEFINITIONS[state.flow], href: FLOW_HREFS[state.flow] };
+  }
+
   if (state.decided) {
-    return { view: "result", ...FLOW_DETAILS[state.flow] };
+    return { view: "unavailable", noServiceMessage: state.noServiceMessage };
   }
 
   const lastAssistantMessage = [...state.messages]
@@ -54,8 +55,15 @@ router.post("/", async (req, res) => {
     return res.status(503).render("choose-service.njk", { view: "error" });
   }
 
-  if (result.decided) {
+  if (result.decided && result.flow) {
     req.session.chooseService = { messages, decided: true, flow: result.flow };
+  } else if (result.decided) {
+    req.session.chooseService = {
+      messages,
+      decided: true,
+      flow: null,
+      noServiceMessage: result.noServiceMessage,
+    };
   } else {
     req.session.chooseService = {
       messages: [...messages, { role: "assistant", content: result.clarifyingQuestion }],

@@ -1,16 +1,54 @@
 const { z } = require("zod");
 const config = require("../config");
 
+// Single source of truth for what each flow actually covers - fed into the
+// AI's system prompt below (so it has real criteria instead of guessing from
+// the bare enum identifiers) and reused by chooseService.js for the "result"
+// screen's copy, so the AI prompt and the UI never drift apart.
+const FLOW_DEFINITIONS = {
+  housing: {
+    label: "Housing",
+    summary:
+      "For general housing applications - for example applying for social housing, or needing " +
+      "help because you're homeless or at risk of homelessness. No disability information needed.",
+  },
+  "housing-benefit-disability": {
+    label: "Housing Benefit (disability)",
+    summary:
+      "For people applying for housing benefit specifically because of a disability - for " +
+      "example if you or someone in your household has a registered disability that affects " +
+      "your housing needs.",
+  },
+};
+
 const ROUTING_SCHEMA = z.object({
   decided: z.boolean(),
   flow: z.enum(["housing", "housing-benefit-disability"]).nullable(),
   clarifyingQuestion: z.string().nullable(),
+  noServiceMessage: z.string().nullable(),
 });
 
 // Once a conversation has had more user turns than this, the model is told it
-// must decide now rather than ask another clarifying question. Relax this
-// later for open-ended multi-turn chat.
-const MAX_CLARIFICATION_ROUNDS = 1;
+// must conclude now rather than ask another clarifying question. This is a
+// safety-net backstop, not the target experience - the system prompt below is
+// what should make the model conclude as soon as it's actually confident.
+// Relax this further later for fully open-ended multi-turn chat.
+const MAX_CLARIFICATION_ROUNDS = 5;
+
+function buildSystemPrompt(mustDecide) {
+  const instruction = mustDecide
+    ? "You must conclude now: decide the closer-matching flow if there's any reasonable match, " +
+      "or say no service is available if truly neither fits. Do not ask another question."
+    : "Decide the flow if you're confident it matches one of the services below. If you're not " +
+      "sure, ask exactly one clarifying question. If the user's need clearly doesn't match " +
+      "either service, say so honestly rather than forcing a guess.";
+
+  return `${instruction}
+
+Available services:
+- "housing": ${FLOW_DEFINITIONS.housing.summary}
+- "housing-benefit-disability": ${FLOW_DEFINITIONS["housing-benefit-disability"].summary}`;
+}
 
 // All AI-provider-specific code (model string, generateText, Output.object)
 // must live only in this file - nothing else in the codebase should import
@@ -29,25 +67,46 @@ async function routeApplicationFlow(messages) {
     }
 
     if (/disab/i.test(lastUserMessage)) {
-      return { decided: true, flow: "housing-benefit-disability", clarifyingQuestion: null };
+      return {
+        decided: true,
+        flow: "housing-benefit-disability",
+        clarifyingQuestion: null,
+        noServiceMessage: null,
+      };
     }
     if (/hous|home|rent/i.test(lastUserMessage)) {
-      return { decided: true, flow: "housing", clarifyingQuestion: null };
+      return { decided: true, flow: "housing", clarifyingQuestion: null, noServiceMessage: null };
     }
 
-    // Genuinely ambiguous (matches neither flow's keywords): ask a clarifying
-    // question once, mirroring the real branch's MAX_CLARIFICATION_ROUNDS
-    // behaviour, then force a decision.
+    // Clearly outside anything on offer: say so honestly instead of forcing a
+    // guess into one of the two real flows.
+    if (/parking|passport|driving licen[cs]e/i.test(lastUserMessage)) {
+      return {
+        decided: true,
+        flow: null,
+        clarifyingQuestion: null,
+        noServiceMessage:
+          "We don't currently offer an online service for that. We can help with general " +
+          "housing applications, or housing benefit if you or your household has a registered " +
+          "disability.",
+      };
+    }
+
+    // Genuinely ambiguous (matches neither flow's keywords, and isn't clearly
+    // out of scope either): keep asking, up to the round cap, then force a
+    // decision - mirroring the real branch's MAX_CLARIFICATION_ROUNDS/
+    // mustDecide behaviour.
     if (userTurns <= MAX_CLARIFICATION_ROUNDS) {
       return {
         decided: false,
         flow: null,
         clarifyingQuestion:
           "Are you applying because of a disability, or is this a general housing application?",
+        noServiceMessage: null,
       };
     }
 
-    return { decided: true, flow: "housing", clarifyingQuestion: null };
+    return { decided: true, flow: "housing", clarifyingQuestion: null, noServiceMessage: null };
   }
 
   const userTurns = messages.filter((message) => message.role === "user").length;
@@ -65,13 +124,11 @@ async function routeApplicationFlow(messages) {
   const { output } = await generateText({
     model: "anthropic/claude-haiku-4.5",
     output: Output.object({ schema: ROUTING_SCHEMA }),
-    system: mustDecide
-      ? "You must decide now. Pick whichever flow more closely matches, even if uncertain."
-      : "Decide the flow if you're confident. Otherwise ask exactly one clarifying question.",
+    system: buildSystemPrompt(mustDecide),
     messages,
   });
 
   return output;
 }
 
-module.exports = { routeApplicationFlow };
+module.exports = { routeApplicationFlow, FLOW_DEFINITIONS };
