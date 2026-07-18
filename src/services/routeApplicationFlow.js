@@ -10,7 +10,8 @@ const FLOW_DEFINITIONS = {
     label: "Housing",
     summary:
       "For general housing applications - for example applying for social housing, or needing " +
-      "help because you're homeless or at risk of homelessness. No disability information needed.",
+      "help because you're homeless or at risk of homelessness. This is the right service when " +
+      "a disability isn't affecting your housing needs.",
   },
   "housing-benefit-disability": {
     label: "Housing Benefit (disability)",
@@ -43,7 +44,17 @@ function buildSystemPrompt(mustDecide) {
       "sure, ask exactly one clarifying question. If the user's need clearly doesn't match " +
       "either service, say so honestly rather than forcing a guess.";
 
+  const disabilityGuidance =
+    "Whether the applicant or anyone in their household has a registered disability affecting " +
+    "their housing needs is the key thing that distinguishes these two services - do not assume " +
+    "either way just because a message otherwise sounds clearly housing-related (for example, " +
+    "being homeless or needing to rent says nothing about disability either way). Unless " +
+    "disability status has already been addressed earlier in the conversation, ask about it " +
+    'before deciding, even when everything else about the situation points at "housing".';
+
   return `${instruction}
+
+${disabilityGuidance}
 
 Available services:
 - "housing": ${FLOW_DEFINITIONS.housing.summary}
@@ -56,26 +67,35 @@ Available services:
 // to Azure OpenAI via @ai-sdk/azure) a one-file change.
 async function routeApplicationFlow(messages) {
   if (config.isTest) {
-    const lastUserMessage = messages[messages.length - 1].content;
-    const userTurns = messages.filter((message) => message.role === "user").length;
+    const userMessages = messages
+      .filter((message) => message.role === "user")
+      .map((m) => m.content);
+    const lastUserMessage = userMessages[userMessages.length - 1];
+    const userTurns = userMessages.length;
+
+    const mentionsDisability = (content) => /disab/i.test(content);
+    const deniesDisability = (content) =>
+      mentionsDisability(content) &&
+      /\b(no|not|nobody|non|don't|doesn't|isn't|aren't|without)\b/i.test(content);
+    const mentionsHousing = (content) => /hous|home|rent/i.test(content);
+
+    // Disability status established so far, based on the most recent message
+    // that raised it (in either direction) - enough for this stub to prove
+    // the gate below is testable; the real branch's system prompt is what
+    // does the actual nuanced reasoning about a real user's wording.
+    const disabilityMessages = userMessages.filter(mentionsDisability);
+    const lastDisabilityMessage = disabilityMessages[disabilityMessages.length - 1];
+    const disabilityStatus = !lastDisabilityMessage
+      ? "unknown"
+      : deniesDisability(lastDisabilityMessage)
+        ? "no"
+        : "yes";
 
     // Test-only trigger for simulating an AI Gateway failure (e.g. from the
     // choose-service route's error-handling tests) - not a real phrase a user
     // would type.
     if (/^simulate-ai-failure$/i.test(lastUserMessage.trim())) {
       throw new Error("Simulated AI Gateway failure (test-only trigger)");
-    }
-
-    if (/disab/i.test(lastUserMessage)) {
-      return {
-        decided: true,
-        flow: "housing-benefit-disability",
-        clarifyingQuestion: null,
-        noServiceMessage: null,
-      };
-    }
-    if (/hous|home|rent/i.test(lastUserMessage)) {
-      return { decided: true, flow: "housing", clarifyingQuestion: null, noServiceMessage: null };
     }
 
     // Clearly outside anything on offer: say so honestly instead of forcing a
@@ -89,6 +109,29 @@ async function routeApplicationFlow(messages) {
           "We don't currently offer an online service for that. We can help with general " +
           "housing applications, or housing benefit if you or your household has a registered " +
           "disability.",
+      };
+    }
+
+    if (mentionsDisability(lastUserMessage) || mentionsHousing(lastUserMessage)) {
+      // Mirrors the real branch's system prompt: disability status is the
+      // thing that actually distinguishes these two flows, so don't decide
+      // until it's been established, even if the message otherwise sounds
+      // clearly housing-related.
+      if (disabilityStatus === "unknown") {
+        return {
+          decided: false,
+          flow: null,
+          clarifyingQuestion:
+            "Does anyone in your household have a registered disability that affects your " +
+            "housing needs?",
+          noServiceMessage: null,
+        };
+      }
+      return {
+        decided: true,
+        flow: disabilityStatus === "yes" ? "housing-benefit-disability" : "housing",
+        clarifyingQuestion: null,
+        noServiceMessage: null,
       };
     }
 

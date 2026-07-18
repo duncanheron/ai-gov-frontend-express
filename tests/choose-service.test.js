@@ -11,7 +11,7 @@ describe("choose service (AI picker)", () => {
     expect(response.text).toContain("Not sure which service you need");
   });
 
-  it("recommends Housing for a clearly housing-flavoured description, with a working link", async () => {
+  it("recommends Housing for a clearly housing-flavoured description once disability has been ruled out, with a working link", async () => {
     const app = createApp();
     const agent = request.agent(app);
 
@@ -25,11 +25,41 @@ describe("choose service (AI picker)", () => {
     expect(submit.status).toBe(302);
     expect(submit.headers.location).toBe("/choose-service");
 
+    // A housing-flavoured description alone doesn't say anything about
+    // disability, so it should ask before deciding, not recommend yet.
+    const clarifyPage = await agent.get("/choose-service");
+    expect(clarifyPage.status).toBe(200);
+    expect(clarifyPage.text.toLowerCase()).toContain("disability");
+    const clarifyToken = extractCsrfToken(clarifyPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: clarifyToken, description: "No, nobody in my household has a disability" });
+
     const result = await agent.get("/choose-service");
     expect(result.status).toBe(200);
-    expect(result.text).toContain("Housing");
+    expect(result.text).toContain("We recommend: Housing");
     expect(result.text).toContain('href="/apply-housing/details"');
     expect(result.text).toContain("For general housing applications");
+  });
+
+  it("asks about disability rather than deciding immediately for a bare 'I am homeless' description", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I am homeless" });
+
+    const result = await agent.get("/choose-service");
+    expect(result.status).toBe(200);
+    expect(result.text).not.toContain("We recommend");
+    expect(result.text.toLowerCase()).toContain("disability");
   });
 
   it("recommends Housing Benefit (disability) for a clearly disability-flavoured description, with a working link", async () => {
@@ -50,7 +80,7 @@ describe("choose service (AI picker)", () => {
     expect(result.text).toContain('href="/apply-housing-benefit/details"');
   });
 
-  it("asks a clarifying question for an ambiguous description, then decides on the next submission", async () => {
+  it("asks a clarifying question for an ambiguous description, then again for disability, then decides", async () => {
     const app = createApp();
     const agent = request.agent(app);
 
@@ -64,7 +94,7 @@ describe("choose service (AI picker)", () => {
 
     const clarifyPage = await agent.get("/choose-service");
     expect(clarifyPage.status).toBe(200);
-    expect(clarifyPage.text).toContain("disability");
+    expect(clarifyPage.text.toLowerCase()).toContain("disability");
     const token2 = extractCsrfToken(clarifyPage.text);
 
     await agent
@@ -72,8 +102,20 @@ describe("choose service (AI picker)", () => {
       .type("form")
       .send({ _csrf: token2, description: "just a regular housing application" });
 
+    // A housing-flavoured message alone still doesn't say anything about
+    // disability, so this should ask specifically about that, not decide yet.
+    const disabilityCheckPage = await agent.get("/choose-service");
+    expect(disabilityCheckPage.status).toBe(200);
+    expect(disabilityCheckPage.text.toLowerCase()).toContain("disability");
+    const token3 = extractCsrfToken(disabilityCheckPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token3, description: "No, nobody has a disability" });
+
     const result = await agent.get("/choose-service");
-    expect(result.text).toContain("Housing");
+    expect(result.text).toContain("We recommend: Housing");
     expect(result.text).toContain('href="/apply-housing/details"');
   });
 
@@ -101,13 +143,13 @@ describe("choose service (AI picker)", () => {
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
-    await agent
-      .post("/choose-service")
-      .type("form")
-      .send({ _csrf: token, description: "I want to apply for housing" });
+    await agent.post("/choose-service").type("form").send({
+      _csrf: token,
+      description: "I want general housing, no disability involved",
+    });
 
     const firstResult = await agent.get("/choose-service");
-    expect(firstResult.text).toContain("Housing");
+    expect(firstResult.text).toContain("We recommend: Housing");
     expect(firstResult.text).toContain('href="/choose-service/start-again"');
 
     const startAgain = await agent.get("/choose-service/start-again");
@@ -135,13 +177,13 @@ describe("choose service (AI picker)", () => {
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
-    await agent
-      .post("/choose-service")
-      .type("form")
-      .send({ _csrf: token, description: "I want to apply for housing" });
+    await agent.post("/choose-service").type("form").send({
+      _csrf: token,
+      description: "I want general housing, no disability involved",
+    });
 
     const decided = await agent.get("/choose-service");
-    expect(decided.text).toContain("Housing");
+    expect(decided.text).toContain("We recommend: Housing");
 
     // The "result" view has no form of its own (just a "Continue" button and
     // links), so there's no fresh CSRF token to scrape from it - reuse the
