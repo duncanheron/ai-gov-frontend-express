@@ -5,6 +5,8 @@
 {% block pageTitle %}
 {%- if view == "result" -%}
 We recommend: {{ label }}
+{%- elif view == "unavailable" -%}
+We don't currently offer an online service for that
 {%- elif view == "error" -%}
 Sorry, there is a problem
 {%- elif view == "clarify" -%}
@@ -20,9 +22,16 @@ Not sure which service you need?
 
     {% if view == "result" %}
       <h1 class="govuk-heading-xl">We recommend: {{ label }}</h1>
+      <p class="govuk-body">{{ summary }}</p>
       <p class="govuk-body">Based on what you told us, this looks like the right service for you.</p>
       {{ govukButton({ text: "Continue to " + label, href: href }) }}
       <p class="govuk-body"><a class="govuk-link" href="/choose-service/start-again">Not the right service? Start again</a></p>
+
+    {% elif view == "unavailable" %}
+      <h1 class="govuk-heading-xl">We don't currently offer an online service for that</h1>
+      <p class="govuk-body">{{ noServiceMessage }}</p>
+      <p class="govuk-body"><a class="govuk-link" href="/choose-service/start-again">Ask a different question</a></p>
+      <p class="govuk-body"><a class="govuk-link" href="/">Return to the homepage</a></p>
 
     {% elif view == "error" %}
       <h1 class="govuk-heading-xl">Sorry, there is a problem</h1>

@@ -29,6 +29,7 @@ describe("choose service (AI picker)", () => {
     expect(result.status).toBe(200);
     expect(result.text).toContain("Housing");
     expect(result.text).toContain('href="/apply-housing/details"');
+    expect(result.text).toContain("For general housing applications");
   });
 
   it("recommends Housing Benefit (disability) for a clearly disability-flavoured description, with a working link", async () => {
@@ -158,5 +159,28 @@ describe("choose service (AI picker)", () => {
     const freshAskPage = await agent.get("/choose-service");
     expect(freshAskPage.text).toContain("Not sure which service you need");
     expect(freshAskPage.text).not.toContain("We recommend");
+  });
+
+  it("honestly says no service is offered for a clearly unrelated description, with a way forward", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    const submit = await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to apply for a parking permit" });
+    expect(submit.status).toBe(302);
+    expect(submit.headers.location).toBe("/choose-service");
+
+    const result = await agent.get("/choose-service");
+    expect(result.status).toBe(200);
+    expect(result.text).toContain("We don't currently offer an online service for that");
+    expect(result.text).toContain("We can help with general housing applications");
+    expect(result.text).toContain('href="/choose-service/start-again"');
+    expect(result.text).toContain('href="/"');
+    expect(result.text).not.toContain("We recommend");
   });
 });
