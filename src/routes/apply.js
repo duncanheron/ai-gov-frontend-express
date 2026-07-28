@@ -1,7 +1,7 @@
 const express = require("express");
 
 const {
-  validateDetails,
+  validateStandardDetails,
   validatePreferences,
   PREFERENCE_OPTIONS,
   preferenceLabels,
@@ -40,7 +40,7 @@ router.get("/details", (req, res) => {
 });
 
 router.post("/details", (req, res) => {
-  const result = validateDetails(req.body);
+  const result = validateStandardDetails(req.body);
 
   if (!result.isValid) {
     return res.status(400).render("apply/details.njk", detailsViewModel(result));
