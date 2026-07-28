@@ -76,6 +76,76 @@ describe("application journey - happy path", () => {
     expect(backToCheckAnswers.headers.location).toBe("/apply/details");
   });
 
+  it("orders the Favourite animal row between Date of birth and Preferences, with a working Change link", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: "Otter",
+    });
+
+    const preferencesPage = await agent.get("/apply/preferences");
+    const preferencesToken = extractCsrfToken(preferencesPage.text);
+    await agent
+      .post("/apply/preferences")
+      .type("form")
+      .send({ _csrf: preferencesToken, preferences: ["food"] });
+
+    const checkAnswers = await agent.get("/apply/check-answers");
+    expect(checkAnswers.text).toMatch(/Date of birth[\s\S]*Favourite animal[\s\S]*Preferences/);
+    expect(checkAnswers.text).toMatch(
+      /href="\/apply\/details">Change<span class="govuk-visually-hidden"> favourite animal<\/span>/,
+    );
+  });
+
+  it("clears a previously entered favourite animal through to check-answers", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: "Otter",
+    });
+
+    const preferencesPage = await agent.get("/apply/preferences");
+    const preferencesToken = extractCsrfToken(preferencesPage.text);
+    await agent
+      .post("/apply/preferences")
+      .type("form")
+      .send({ _csrf: preferencesToken, preferences: ["food"] });
+
+    const detailsAgain = await agent.get("/apply/details");
+    const detailsTokenAgain = extractCsrfToken(detailsAgain.text);
+    await agent.post("/apply/details").type("form").send({
+      _csrf: detailsTokenAgain,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: "",
+    });
+
+    const checkAnswers = await agent.get("/apply/check-answers");
+    expect(checkAnswers.text).not.toContain("Otter");
+    expect(checkAnswers.text).toContain("Not provided");
+  });
+
   it("completes the journey with no preferences selected, showing None selected", async () => {
     const app = createApp();
     const agent = request.agent(app);
