@@ -36,6 +36,6 @@ module.exports = [
     },
   },
   {
-    ignores: ["node_modules/", "public/", "coverage/"],
+    ignores: ["node_modules/", "public/", "coverage/", ".claude/worktrees/"],
   },
 ];
