@@ -169,6 +169,45 @@ describe("housing benefit (disability) application journey - validation", () => 
     expect(response.text).toContain("Date of birth must be a real date");
   });
 
+  it("does not 500 when details and disability details are submitted as duplicated parameters, and takes the first value", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing-benefit/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    const submitDetails = await agent
+      .post("/apply-housing-benefit/details")
+      .type("form")
+      .send({
+        _csrf: detailsToken,
+        fullName: ["Ada Lovelace", "Ignored Duplicate"],
+        email: ["ada@example.com", "ignored@example.com"],
+        "dateOfBirth-day": ["27", "1"],
+        "dateOfBirth-month": ["3", "1"],
+        "dateOfBirth-year": ["1985", "2000"],
+      });
+    expect(submitDetails.status).toBe(302);
+    expect(submitDetails.headers.location).toBe("/apply-housing-benefit/disability-details");
+
+    const disabilityDetailsPage = await agent.get("/apply-housing-benefit/disability-details");
+    const token = extractCsrfToken(disabilityDetailsPage.text);
+    const submitDisabilityDetails = await agent
+      .post("/apply-housing-benefit/disability-details")
+      .type("form")
+      .send({
+        _csrf: token,
+        disabilityDetails: ["Uses a wheelchair.", "Ignored duplicate answer."],
+      });
+    expect(submitDisabilityDetails.status).toBe(302);
+    expect(submitDisabilityDetails.headers.location).toBe("/apply-housing-benefit/check-answers");
+
+    const checkAnswers = await agent.get("/apply-housing-benefit/check-answers");
+    expect(checkAnswers.status).toBe(200);
+    expect(checkAnswers.text).toContain("Ada Lovelace");
+    expect(checkAnswers.text).toContain("Uses a wheelchair.");
+    expect(checkAnswers.text).not.toContain("Ignored duplicate answer.");
+  });
+
   it("rejects an empty disability details submission, since it is the substance of the application", async () => {
     const app = createApp();
     const agent = request.agent(app);

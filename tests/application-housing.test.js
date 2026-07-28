@@ -104,6 +104,45 @@ describe("housing application journey - guards and validation", () => {
     expect(response.text).toContain("Date of birth must be a real date");
   });
 
+  it("does not 500 when details and situation are submitted as duplicated parameters, and takes the first value", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    const submitDetails = await agent
+      .post("/apply-housing/details")
+      .type("form")
+      .send({
+        _csrf: detailsToken,
+        fullName: ["Ada Lovelace", "Ignored Duplicate"],
+        email: ["ada@example.com", "ignored@example.com"],
+        "dateOfBirth-day": ["27", "1"],
+        "dateOfBirth-month": ["3", "1"],
+        "dateOfBirth-year": ["1985", "2000"],
+      });
+    expect(submitDetails.status).toBe(302);
+    expect(submitDetails.headers.location).toBe("/apply-housing/situation");
+
+    const situationPage = await agent.get("/apply-housing/situation");
+    const situationToken = extractCsrfToken(situationPage.text);
+    const submitSituation = await agent
+      .post("/apply-housing/situation")
+      .type("form")
+      .send({
+        _csrf: situationToken,
+        situation: ["renting-privately", "homeless-or-at-risk"],
+      });
+    expect(submitSituation.status).toBe(302);
+    expect(submitSituation.headers.location).toBe("/apply-housing/check-answers");
+
+    const checkAnswers = await agent.get("/apply-housing/check-answers");
+    expect(checkAnswers.status).toBe(200);
+    expect(checkAnswers.text).toContain("Ada Lovelace");
+    expect(checkAnswers.text).toContain("Renting privately");
+    expect(checkAnswers.text).not.toContain("Homeless or at risk");
+  });
+
   it("shows an error when no housing situation is selected", async () => {
     const app = createApp();
     const agent = request.agent(app);

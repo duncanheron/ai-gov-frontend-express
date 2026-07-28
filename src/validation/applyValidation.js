@@ -1,5 +1,16 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// express.urlencoded({ extended: false }) parses a repeated key (e.g.
+// ?favouriteAnimal=cat&favouriteAnimal=dog) into an array, so a body field
+// can't be assumed to be a string or undefined. This normalises any of
+// those shapes to a single trimmed string, taking the first value for a
+// duplicated parameter (the conventional choice, matching what
+// `extended: true` would surface).
+function toStr(value) {
+  if (Array.isArray(value)) value = value[0];
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function toInt(value) {
   if (value === undefined || value === null || String(value).trim() === "") {
     return null;
@@ -18,11 +29,11 @@ function isRealDate(day, month, year) {
 
 function validateDetails(body) {
   const values = {
-    fullName: (body.fullName || "").trim(),
-    email: (body.email || "").trim(),
-    dobDay: (body["dateOfBirth-day"] || "").trim(),
-    dobMonth: (body["dateOfBirth-month"] || "").trim(),
-    dobYear: (body["dateOfBirth-year"] || "").trim(),
+    fullName: toStr(body.fullName),
+    email: toStr(body.email),
+    dobDay: toStr(body["dateOfBirth-day"]),
+    dobMonth: toStr(body["dateOfBirth-month"]),
+    dobYear: toStr(body["dateOfBirth-year"]),
   };
 
   const errors = [];
@@ -86,7 +97,7 @@ const FAVOURITE_ANIMAL_MAX_LENGTH = 100;
 
 function validateStandardDetails(body) {
   const base = validateDetails(body);
-  const favouriteAnimal = (body.favouriteAnimal || "").trim();
+  const favouriteAnimal = toStr(body.favouriteAnimal);
 
   const values = { ...base.values, favouriteAnimal };
   const errors = [...base.errors];
@@ -137,6 +148,7 @@ function preferenceLabels(preferences) {
 }
 
 module.exports = {
+  toStr,
   validateDetails,
   validateStandardDetails,
   FAVOURITE_ANIMAL_MAX_LENGTH,
