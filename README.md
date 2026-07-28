@@ -51,14 +51,21 @@ available there.
 
 ## Deployment
 
-Vercel deploys `main` automatically (preview deployments are disabled - see `vercel.json`).
+Vercel deploys `main` to production. Note that pull requests also get Preview deployments, despite
+the `git.deploymentEnabled` block in `vercel.json` - that setting is not currently taking effect.
 
-Schema migrations are applied by the build itself: `vercel-build` runs `migrate:up` before
+Schema migrations are applied by the build itself: `vercel-build` runs `migrate:deploy` before
 compiling assets, so a migration-bearing commit reaches the database before the new code serves
 traffic. If a migration fails, the build fails and the previous deployment keeps serving.
 
-Two things worth knowing about that:
+Three things worth knowing about that:
 
+- **`migrate:deploy` only migrates when `VERCEL_ENV=production`.** This guard matters because the
+  Preview and Production environments currently share one Neon database (same endpoint, same
+  `neondb`) - Neon's preview branching is not enabled. Without the guard, opening a PR containing
+  a migration would apply it to the production database at preview-build time, before review and
+  before merge. If preview branching is ever enabled, the guard can be relaxed so previews migrate
+  their own branch, which is what Neon recommends.
 - Migrations run against `DATABASE_URL_UNPOOLED` (Neon's direct endpoint), falling back to
   `DATABASE_URL` when it isn't set. `node-pg-migrate` takes a session-level advisory lock so two
   migrations can't race, and Neon's pooled endpoint is PgBouncer in transaction-pooling mode,
