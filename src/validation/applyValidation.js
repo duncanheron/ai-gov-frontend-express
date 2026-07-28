@@ -94,10 +94,10 @@ function validateStandardDetails(body) {
 
   if (favouriteAnimal.length > FAVOURITE_ANIMAL_MAX_LENGTH) {
     errors.push({
-      text: "Favourite animal must be 100 characters or fewer",
+      text: `Favourite animal must be ${FAVOURITE_ANIMAL_MAX_LENGTH} characters or fewer`,
       href: "#favouriteAnimal",
     });
-    fieldErrors.favouriteAnimal = "Favourite animal must be 100 characters or fewer";
+    fieldErrors.favouriteAnimal = `Favourite animal must be ${FAVOURITE_ANIMAL_MAX_LENGTH} characters or fewer`;
   }
 
   return {
