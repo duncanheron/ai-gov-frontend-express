@@ -10,13 +10,25 @@ async function create({
   preferences = [],
   flow = "standard",
   flowAnswer = null,
+  favouriteAnimal = null,
 }) {
   const id = crypto.randomUUID();
 
   await pool.query(
-    `INSERT INTO applications (id, full_name, email, date_of_birth, reference, submitted_at, preferences, flow, flow_answer)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [id, fullName, email, dateOfBirth, reference, submittedAt, preferences, flow, flowAnswer],
+    `INSERT INTO applications (id, full_name, email, date_of_birth, reference, submitted_at, preferences, flow, flow_answer, favourite_animal)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      id,
+      fullName,
+      email,
+      dateOfBirth,
+      reference,
+      submittedAt,
+      preferences,
+      flow,
+      flowAnswer,
+      favouriteAnimal,
+    ],
   );
 
   return {
@@ -29,6 +41,7 @@ async function create({
     preferences,
     flow,
     flowAnswer,
+    favouriteAnimal,
   };
 }
 
