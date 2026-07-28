@@ -74,6 +74,15 @@
         ]
       }) }}
 
+      {{ govukInput({
+        id: "favouriteAnimal",
+        name: "favouriteAnimal",
+        label: { text: "Favourite animal (optional)", classes: "govuk-label--m" },
+        classes: "govuk-input--width-20",
+        value: values.favouriteAnimal,
+        errorMessage: { text: fieldErrors.favouriteAnimal } if fieldErrors.favouriteAnimal else undefined
+      }) }}
+
       {{ govukButton({ text: "Continue" }) }}
     </form>
   </div>

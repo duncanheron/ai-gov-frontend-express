@@ -82,6 +82,33 @@ function validateDetails(body) {
   return { values, errors, fieldErrors, dateErrorParts, isValid: errors.length === 0 };
 }
 
+const FAVOURITE_ANIMAL_MAX_LENGTH = 100;
+
+function validateStandardDetails(body) {
+  const base = validateDetails(body);
+  const favouriteAnimal = (body.favouriteAnimal || "").trim();
+
+  const values = { ...base.values, favouriteAnimal };
+  const errors = [...base.errors];
+  const fieldErrors = { ...base.fieldErrors };
+
+  if (favouriteAnimal.length > FAVOURITE_ANIMAL_MAX_LENGTH) {
+    errors.push({
+      text: "Favourite animal must be 100 characters or fewer",
+      href: "#favouriteAnimal",
+    });
+    fieldErrors.favouriteAnimal = "Favourite animal must be 100 characters or fewer";
+  }
+
+  return {
+    values,
+    errors,
+    fieldErrors,
+    dateErrorParts: base.dateErrorParts,
+    isValid: errors.length === 0,
+  };
+}
+
 const PREFERENCE_OPTIONS = [
   { value: "food", text: "Food" },
   { value: "animals", text: "Animals" },
@@ -109,4 +136,11 @@ function preferenceLabels(preferences) {
   return preferences.map((value) => labelByValue.get(value) || value).join(", ");
 }
 
-module.exports = { validateDetails, validatePreferences, PREFERENCE_OPTIONS, preferenceLabels };
+module.exports = {
+  validateDetails,
+  validateStandardDetails,
+  FAVOURITE_ANIMAL_MAX_LENGTH,
+  validatePreferences,
+  PREFERENCE_OPTIONS,
+  preferenceLabels,
+};

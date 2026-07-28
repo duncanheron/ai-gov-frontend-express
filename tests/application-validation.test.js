@@ -1,6 +1,63 @@
 const request = require("supertest");
 const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
+const {
+  validateDetails,
+  validateStandardDetails,
+  FAVOURITE_ANIMAL_MAX_LENGTH,
+} = require("../src/validation/applyValidation");
+
+const VALID_STANDARD_DETAILS = {
+  fullName: "Ada Lovelace",
+  email: "ada@example.com",
+  "dateOfBirth-day": "27",
+  "dateOfBirth-month": "3",
+  "dateOfBirth-year": "1985",
+};
+
+describe("validateStandardDetails", () => {
+  it("is valid with favouriteAnimal left blank, and always returns the key", () => {
+    const result = validateStandardDetails({ ...VALID_STANDARD_DETAILS });
+
+    expect(result.isValid).toBe(true);
+    expect(result.values.favouriteAnimal).toBe("");
+    expect(result.fieldErrors.favouriteAnimal).toBeUndefined();
+  });
+
+  it("rejects a favouriteAnimal longer than the max length", () => {
+    const tooLong = "a".repeat(FAVOURITE_ANIMAL_MAX_LENGTH + 1);
+    const result = validateStandardDetails({
+      ...VALID_STANDARD_DETAILS,
+      favouriteAnimal: tooLong,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContainEqual({
+      text: "Favourite animal must be 100 characters or fewer",
+      href: "#favouriteAnimal",
+    });
+    expect(result.fieldErrors.favouriteAnimal).toBe(
+      "Favourite animal must be 100 characters or fewer",
+    );
+  });
+
+  it("trims the favouriteAnimal value", () => {
+    const result = validateStandardDetails({
+      ...VALID_STANDARD_DETAILS,
+      favouriteAnimal: "  Otter  ",
+    });
+
+    expect(result.values.favouriteAnimal).toBe("Otter");
+  });
+});
+
+describe("validateDetails (shared by the housing flows)", () => {
+  it("does not include favouriteAnimal even if present in the request body", () => {
+    const result = validateDetails({ ...VALID_STANDARD_DETAILS, favouriteAnimal: "Cat" });
+
+    expect(result.values).not.toHaveProperty("favouriteAnimal");
+  });
+});
 
 describe("application journey - validation", () => {
   it("shows the error summary and per-field errors for invalid input", async () => {
@@ -141,5 +198,33 @@ describe("application journey - validation", () => {
 
     expect(response.status).toBe(404);
     expect(response.text).toContain("Page not found");
+  });
+
+  it("does not persist favouriteAnimal for the housing flow, even if submitted", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply-housing/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply-housing/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: "Otter",
+    });
+
+    const situationPage = await agent.get("/apply-housing/situation");
+    const situationToken = extractCsrfToken(situationPage.text);
+    await agent
+      .post("/apply-housing/situation")
+      .type("form")
+      .send({ _csrf: situationToken, situation: "renting-privately" });
+
+    const checkAnswers = await agent.get("/apply-housing/check-answers");
+    expect(checkAnswers.status).toBe(200);
+    expect(checkAnswers.text).not.toContain("Otter");
   });
 });
