@@ -73,6 +73,7 @@ router.get("/check-answers", requireDetails, requirePreferences, (req, res) => {
   res.render("apply/check-answers.njk", {
     answers,
     dobFormatted,
+    favouriteAnimalLabel: answers.favouriteAnimal || "Not provided",
     preferencesLabel: preferenceLabels(answers.preferences),
   });
 });
