@@ -28,6 +28,7 @@ describe("application journey - happy path", () => {
       "dateOfBirth-day": "27",
       "dateOfBirth-month": "3",
       "dateOfBirth-year": "1985",
+      favouriteAnimal: "Otter",
     });
     expect(submitDetails.status).toBe(302);
     expect(submitDetails.headers.location).toBe("/apply/check-answers");
@@ -55,6 +56,7 @@ describe("application journey - happy path", () => {
     expect(checkAnswers.text).toContain("Ada Lovelace");
     expect(checkAnswers.text).toContain("ada@example.com");
     expect(checkAnswers.text).toContain("27/03/1985");
+    expect(checkAnswers.text).toContain("Otter");
     expect(checkAnswers.text).toContain("Food, Artificial intelligence (AI)");
     const checkAnswersToken = extractCsrfToken(checkAnswers.text);
 
@@ -96,5 +98,6 @@ describe("application journey - happy path", () => {
     const checkAnswers = await agent.get("/apply/check-answers");
     expect(checkAnswers.status).toBe(200);
     expect(checkAnswers.text).toContain("None selected");
+    expect(checkAnswers.text).toContain("Not provided");
   });
 });
