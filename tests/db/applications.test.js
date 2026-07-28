@@ -93,4 +93,33 @@ describe("applications data module", () => {
     expect(found.flow).toBe("standard");
     expect(found.flow_answer).toBeNull();
   });
+
+  it("creates an application with a favourite animal and reads it back", async () => {
+    await applications.create({
+      fullName: "Marie Curie",
+      email: "marie@example.com",
+      dateOfBirth: "1867-11-07",
+      reference: "TEST-FAVOURITE-ANIMAL",
+      submittedAt: new Date(),
+      favouriteAnimal: "Otter",
+    });
+
+    const found = await applications.get("TEST-FAVOURITE-ANIMAL");
+
+    expect(found.favourite_animal).toBe("Otter");
+  });
+
+  it("defaults favourite_animal to null when not provided", async () => {
+    await applications.create({
+      fullName: "Chien-Shiung Wu",
+      email: "chien-shiung@example.com",
+      dateOfBirth: "1912-05-31",
+      reference: "TEST-NO-FAVOURITE-ANIMAL",
+      submittedAt: new Date(),
+    });
+
+    const found = await applications.get("TEST-NO-FAVOURITE-ANIMAL");
+
+    expect(found.favourite_animal).toBeNull();
+  });
 });

@@ -89,6 +89,7 @@ router.post("/check-answers", requireDetails, requirePreferences, async (req, re
     reference,
     submittedAt,
     preferences: answers.preferences,
+    favouriteAnimal: answers.favouriteAnimal || null,
   });
 
   req.session.application = {
