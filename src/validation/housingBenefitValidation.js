@@ -1,3 +1,5 @@
+const { toStr } = require("./applyValidation");
+
 const DISABILITY_DETAILS_MAX_LENGTH = 1000;
 
 // Unlike the existing /apply preferences step (which deliberately allows an
@@ -6,7 +8,7 @@ const DISABILITY_DETAILS_MAX_LENGTH = 1000;
 // there is nothing for a caseworker to assess, so it is required here.
 function validateDisabilityDetails(body) {
   const values = {
-    disabilityDetails: (body.disabilityDetails || "").trim(),
+    disabilityDetails: toStr(body.disabilityDetails),
   };
 
   const errors = [];

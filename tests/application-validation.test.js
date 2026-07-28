@@ -2,6 +2,7 @@ const request = require("supertest");
 const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const {
+  toStr,
   validateDetails,
   validateStandardDetails,
   FAVOURITE_ANIMAL_MAX_LENGTH,
@@ -14,6 +15,24 @@ const VALID_STANDARD_DETAILS = {
   "dateOfBirth-month": "3",
   "dateOfBirth-year": "1985",
 };
+
+describe("toStr", () => {
+  it("returns an empty string for undefined", () => {
+    expect(toStr(undefined)).toBe("");
+  });
+
+  it("trims a plain string", () => {
+    expect(toStr("  hello  ")).toBe("hello");
+  });
+
+  it("takes the first value and trims it when express.urlencoded coerces a repeated key into an array", () => {
+    expect(toStr(["  cat  ", "dog"])).toBe("cat");
+  });
+
+  it("returns an empty string for an empty array", () => {
+    expect(toStr([])).toBe("");
+  });
+});
 
 describe("validateStandardDetails", () => {
   it("is valid with favouriteAnimal left blank, and always returns the key", () => {
@@ -92,6 +111,35 @@ describe("application journey - validation", () => {
     expect(response.text).toContain("Enter your full name");
     expect(response.text).toContain("Enter an email address in the correct format");
     expect(response.text).toContain("Date of birth must be a real date");
+  });
+
+  it("does not 500 when every scalar field is submitted as a duplicated parameter, and takes the first value", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply/details");
+    const token = extractCsrfToken(detailsPage.text);
+
+    const response = await agent
+      .post("/apply/details")
+      .type("form")
+      .send({
+        _csrf: token,
+        fullName: ["Ada Lovelace", "Ignored Duplicate"],
+        email: ["ada@example.com", "ignored@example.com"],
+        "dateOfBirth-day": ["27", "1"],
+        "dateOfBirth-month": ["3", "1"],
+        "dateOfBirth-year": ["1985", "2000"],
+        favouriteAnimal: ["Cat", "Dog"],
+      });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe("/apply/check-answers");
+
+    // Re-fetch details to confirm the repopulated value is the first one submitted.
+    const detailsAgain = await agent.get("/apply/details");
+    expect(detailsAgain.text).toMatch(/name="favouriteAnimal"[^>]*value="Cat"/);
+    expect(detailsAgain.text).not.toContain("Dog");
   });
 
   it("shows a favouriteAnimal error, keeps the entered value, and points at the field for a too-long submission", async () => {

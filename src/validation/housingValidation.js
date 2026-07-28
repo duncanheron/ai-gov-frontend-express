@@ -1,3 +1,5 @@
+const { toStr } = require("./applyValidation");
+
 const SITUATION_OPTIONS = [
   { value: "renting-privately", text: "Renting privately" },
   { value: "living-with-family", text: "Living with family or friends" },
@@ -10,7 +12,7 @@ const SITUATION_OPTIONS = [
 // "no housing situation" isn't a meaningful answer, so we require exactly
 // one selection.
 function validateSituation(body) {
-  const value = (body.situation || "").trim();
+  const value = toStr(body.situation);
   const isKnownValue = SITUATION_OPTIONS.some((option) => option.value === value);
 
   if (!isKnownValue) {
