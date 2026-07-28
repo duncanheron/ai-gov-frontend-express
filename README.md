@@ -16,7 +16,7 @@ Journey: homepage (start page) -> your details -> check your answers -> confirma
 nvm use
 npm install
 cp .env.example .env   # set SESSION_SECRET, and point DATABASE_URL at a reachable Postgres
-npm run migrate:up     # applies schema migrations
+npm run migrate:up     # applies schema migrations (local only - deploys do this themselves)
 npm run dev
 ```
 
@@ -48,6 +48,33 @@ The `web` service also loads an optional `.env.local` file if present. For the A
 picker (`/choose-service`) to return real recommendations rather than its graceful fallback error
 page, make sure an `AI_GATEWAY_API_KEY` or a `vercel env pull`-sourced `VERCEL_OIDC_TOKEN` is
 available there.
+
+## Deployment
+
+Vercel deploys `main` to production. Note that pull requests also get Preview deployments, despite
+the `git.deploymentEnabled` block in `vercel.json` - that setting is not currently taking effect.
+
+Schema migrations are applied by the build itself: `vercel-build` runs `migrate:deploy` before
+compiling assets, so a migration-bearing commit reaches the database before the new code serves
+traffic. If a migration fails, the build fails and the previous deployment keeps serving.
+
+Three things worth knowing about that:
+
+- **`migrate:deploy` only migrates when `VERCEL_ENV=production`.** This guard matters because the
+  Preview and Production environments currently share one Neon database (same endpoint, same
+  `neondb`) - Neon's preview branching is not enabled. Without the guard, opening a PR containing
+  a migration would apply it to the production database at preview-build time, before review and
+  before merge. If preview branching is ever enabled, the guard can be relaxed so previews migrate
+  their own branch, which is what Neon recommends.
+- Migrations run against `DATABASE_URL_UNPOOLED` (Neon's direct endpoint), falling back to
+  `DATABASE_URL` when it isn't set. `node-pg-migrate` takes a session-level advisory lock so two
+  migrations can't race, and Neon's pooled endpoint is PgBouncer in transaction-pooling mode,
+  which doesn't reliably preserve session state between statements. The app itself still uses the
+  pooled `DATABASE_URL` at runtime.
+- A code rollback does not roll back schema. Additive, nullable columns are safe, because the
+  older code simply ignores them. Anything destructive - dropping or renaming a column, adding
+  `NOT NULL` - needs phasing across two deploys (expand, then contract), since the build applies
+  the change after the old code was live and before the new code is.
 
 ## Architecture notes
 
