@@ -85,6 +85,53 @@ describe("application detail page", () => {
     expect(response.text).toContain("Some disability details text");
   });
 
+  it("shows the favourite animal row, key and value together, when a value was provided", async () => {
+    await applications.create({
+      fullName: "Katherine Johnson",
+      email: "katherine@example.com",
+      dateOfBirth: "1918-08-26",
+      reference: "TEST-DETAIL-FAVOURITE-ANIMAL",
+      submittedAt: new Date("2026-01-06T09:00:00.000Z"),
+      favouriteAnimal: "Otter",
+    });
+
+    const app = createApp();
+    const response = await request(app).get("/applications/TEST-DETAIL-FAVOURITE-ANIMAL");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toMatch(
+      /Favourite animal\s*<\/dt>\s*<dd class="govuk-summary-list__value">\s*Otter/,
+    );
+  });
+
+  it("shows no favourite animal row when favourite_animal is NULL, regardless of flow", async () => {
+    const app = createApp();
+
+    for (const reference of ["TEST-DETAIL", "TEST-DETAIL-HOUSING", "TEST-DETAIL-DISABILITY"]) {
+      const response = await request(app).get(`/applications/${reference}`);
+
+      expect(response.status).toBe(200);
+      expect(response.text).not.toContain("Favourite animal");
+    }
+  });
+
+  it("shows no favourite animal row when favourite_animal is an empty string (legacy/empty row)", async () => {
+    await applications.create({
+      fullName: "Chien-Shiung Wu",
+      email: "chien-shiung@example.com",
+      dateOfBirth: "1912-05-31",
+      reference: "TEST-DETAIL-EMPTY-FAVOURITE-ANIMAL",
+      submittedAt: new Date("2026-01-07T09:00:00.000Z"),
+      favouriteAnimal: "",
+    });
+
+    const app = createApp();
+    const response = await request(app).get("/applications/TEST-DETAIL-EMPTY-FAVOURITE-ANIMAL");
+
+    expect(response.status).toBe(200);
+    expect(response.text).not.toContain("Favourite animal");
+  });
+
   it("shows no flow-specific row for a standard flow application", async () => {
     const app = createApp();
     const response = await request(app).get("/applications/TEST-DETAIL");

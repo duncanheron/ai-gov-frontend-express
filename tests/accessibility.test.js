@@ -152,6 +152,7 @@ describe("accessibility", () => {
       "dateOfBirth-day": "27",
       "dateOfBirth-month": "3",
       "dateOfBirth-year": "1985",
+      favouriteAnimal: "Otter",
     });
     const preferencesPage = await agent.get("/apply/preferences");
     const preferencesToken = extractCsrfToken(preferencesPage.text);
@@ -164,6 +165,7 @@ describe("accessibility", () => {
     const [, reference] = confirmation.text.match(/([A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3})/);
 
     const response = await agent.get(`/applications/${reference}`);
+    expect(response.text).toContain("Favourite animal");
     await expectNoViolations(response.text);
   });
 

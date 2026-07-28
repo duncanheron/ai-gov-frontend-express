@@ -45,6 +45,7 @@ router.get("/:reference", async (req, res, next) => {
     reference: application.reference,
     submittedAtFormatted: formatDate(application.submitted_at),
     preferencesLabel: preferenceLabels(application.preferences),
+    favouriteAnimal: application.favourite_animal || undefined,
     flowAnswerLabel,
     flowAnswer: flowAnswerLabel ? application.flow_answer : undefined,
   });
