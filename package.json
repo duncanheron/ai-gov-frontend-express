@@ -14,7 +14,7 @@
     "predev": "npm run build:assets",
     "dev": "nodemon server.js",
     "build:assets": "node scripts/build-assets.js",
-    "vercel-build": "npm run build:assets",
+    "vercel-build": "DATABASE_URL=\"${DATABASE_URL_UNPOOLED:-$DATABASE_URL}\" npm run migrate:up && npm run build:assets",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
