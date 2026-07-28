@@ -85,7 +85,7 @@ describe("application detail page", () => {
     expect(response.text).toContain("Some disability details text");
   });
 
-  it("shows the favourite animal row when a value was provided", async () => {
+  it("shows the favourite animal row, key and value together, when a value was provided", async () => {
     await applications.create({
       fullName: "Katherine Johnson",
       email: "katherine@example.com",
@@ -99,29 +99,34 @@ describe("application detail page", () => {
     const response = await request(app).get("/applications/TEST-DETAIL-FAVOURITE-ANIMAL");
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain("Favourite animal");
-    expect(response.text).toContain("Otter");
+    expect(response.text).toMatch(
+      /Favourite animal\s*<\/dt>\s*<dd class="govuk-summary-list__value">\s*Otter/,
+    );
   });
 
-  it("shows no favourite animal row when no value was provided", async () => {
+  it("shows no favourite animal row when favourite_animal is NULL, regardless of flow", async () => {
     const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL");
 
-    expect(response.status).toBe(200);
-    expect(response.text).not.toContain("Favourite animal");
+    for (const reference of ["TEST-DETAIL", "TEST-DETAIL-HOUSING", "TEST-DETAIL-DISABILITY"]) {
+      const response = await request(app).get(`/applications/${reference}`);
+
+      expect(response.status).toBe(200);
+      expect(response.text).not.toContain("Favourite animal");
+    }
   });
 
-  it("shows no favourite animal row for a housing flow application", async () => {
-    const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL-HOUSING");
+  it("shows no favourite animal row when favourite_animal is an empty string (legacy/empty row)", async () => {
+    await applications.create({
+      fullName: "Chien-Shiung Wu",
+      email: "chien-shiung@example.com",
+      dateOfBirth: "1912-05-31",
+      reference: "TEST-DETAIL-EMPTY-FAVOURITE-ANIMAL",
+      submittedAt: new Date("2026-01-07T09:00:00.000Z"),
+      favouriteAnimal: "",
+    });
 
-    expect(response.status).toBe(200);
-    expect(response.text).not.toContain("Favourite animal");
-  });
-
-  it("shows no favourite animal row for a housing benefit disability flow application", async () => {
     const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL-DISABILITY");
+    const response = await request(app).get("/applications/TEST-DETAIL-EMPTY-FAVOURITE-ANIMAL");
 
     expect(response.status).toBe(200);
     expect(response.text).not.toContain("Favourite animal");
