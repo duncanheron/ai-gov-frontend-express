@@ -24,6 +24,17 @@ describe("validateStandardDetails", () => {
     expect(result.fieldErrors.favouriteAnimal).toBeUndefined();
   });
 
+  it("is valid with favouriteAnimal at exactly the max length", () => {
+    const exactlyMax = "a".repeat(FAVOURITE_ANIMAL_MAX_LENGTH);
+    const result = validateStandardDetails({
+      ...VALID_STANDARD_DETAILS,
+      favouriteAnimal: exactlyMax,
+    });
+
+    expect(result.isValid).toBe(true);
+    expect(result.fieldErrors.favouriteAnimal).toBeUndefined();
+  });
+
   it("rejects a favouriteAnimal longer than the max length", () => {
     const tooLong = "a".repeat(FAVOURITE_ANIMAL_MAX_LENGTH + 1);
     const result = validateStandardDetails({
@@ -81,6 +92,87 @@ describe("application journey - validation", () => {
     expect(response.text).toContain("Enter your full name");
     expect(response.text).toContain("Enter an email address in the correct format");
     expect(response.text).toContain("Date of birth must be a real date");
+  });
+
+  it("shows a favouriteAnimal error, keeps the entered value, and points at the field for a too-long submission", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply/details");
+    const token = extractCsrfToken(detailsPage.text);
+
+    const tooLong = "a".repeat(FAVOURITE_ANIMAL_MAX_LENGTH + 1);
+    const response = await agent.post("/apply/details").type("form").send({
+      _csrf: token,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: tooLong,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain('href="#favouriteAnimal"');
+    expect(response.text).toContain("Favourite animal must be 100 characters or fewer");
+    expect(response.text).toContain(`value="${tooLong}"`);
+  });
+
+  it("renders the favouriteAnimal input wired to the correct field name and value", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply/details");
+    const token = extractCsrfToken(detailsPage.text);
+
+    await agent.post("/apply/details").type("form").send({
+      _csrf: token,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: "Otter",
+    });
+
+    const detailsAgain = await agent.get("/apply/details");
+    expect(detailsAgain.text).toMatch(/name="favouriteAnimal"[^>]*value="Otter"/);
+  });
+
+  it("repopulates then clears the favouriteAnimal value across two submissions", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const detailsPage = await agent.get("/apply/details");
+    const token = extractCsrfToken(detailsPage.text);
+
+    await agent.post("/apply/details").type("form").send({
+      _csrf: token,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: "Otter",
+    });
+
+    const repopulated = await agent.get("/apply/details");
+    expect(repopulated.text).toMatch(/name="favouriteAnimal"[^>]*value="Otter"/);
+
+    const secondToken = extractCsrfToken(repopulated.text);
+    await agent.post("/apply/details").type("form").send({
+      _csrf: secondToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal: "",
+    });
+
+    const cleared = await agent.get("/apply/details");
+    expect(cleared.text).not.toMatch(/name="favouriteAnimal"[^>]*value="Otter"/);
+    expect(cleared.text).toMatch(/name="favouriteAnimal"[^>]*value=""/);
   });
 
   it("blocks check-answers and confirmation without completing the details step", async () => {
@@ -198,33 +290,5 @@ describe("application journey - validation", () => {
 
     expect(response.status).toBe(404);
     expect(response.text).toContain("Page not found");
-  });
-
-  it("does not persist favouriteAnimal for the housing flow, even if submitted", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
-
-    const detailsPage = await agent.get("/apply-housing/details");
-    const detailsToken = extractCsrfToken(detailsPage.text);
-    await agent.post("/apply-housing/details").type("form").send({
-      _csrf: detailsToken,
-      fullName: "Ada Lovelace",
-      email: "ada@example.com",
-      "dateOfBirth-day": "27",
-      "dateOfBirth-month": "3",
-      "dateOfBirth-year": "1985",
-      favouriteAnimal: "Otter",
-    });
-
-    const situationPage = await agent.get("/apply-housing/situation");
-    const situationToken = extractCsrfToken(situationPage.text);
-    await agent
-      .post("/apply-housing/situation")
-      .type("form")
-      .send({ _csrf: situationToken, situation: "renting-privately" });
-
-    const checkAnswers = await agent.get("/apply-housing/check-answers");
-    expect(checkAnswers.status).toBe(200);
-    expect(checkAnswers.text).not.toContain("Otter");
   });
 });

@@ -50,7 +50,10 @@ describe("accessibility", () => {
     const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
 
-    const response = await agent.post("/apply/details").type("form").send({ _csrf: token });
+    const response = await agent
+      .post("/apply/details")
+      .type("form")
+      .send({ _csrf: token, favouriteAnimal: "a".repeat(101) });
     await expectNoViolations(response.text);
   });
 
