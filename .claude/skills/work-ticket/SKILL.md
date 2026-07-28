@@ -4,7 +4,7 @@ description: Pick up or create a Linear ticket for this repo, implement it on it
 ---
 
 This repo tracks work as Linear issues in the **ai-gov-frontend-express** project
-(team: **Tpximpact**, key `TPX`). The native GitHub<->Linear integration is
+(team: **Cobalt**, key `CBLT`). The native GitHub<->Linear integration is
 installed for this repo, so branch/PR linking and most status transitions
 happen automatically (branch named after an issue auto-attaches to it; PRs
 referencing an issue link automatically; merging typically auto-completes the
@@ -52,7 +52,7 @@ A one-line title with no description is not enough, even for small changes.
      (project: `ai-gov-frontend-express`, `state: "Todo"`) or ask the user
      which one. Issues still in `Backlog` are not eligible for pickup.
    - New work: draft the issue to the detail bar above, create it with
-     `mcp__claude_ai_Linear__save_issue` (team `Tpximpact`, project
+     `mcp__claude_ai_Linear__save_issue` (team `Cobalt`, project
      `ai-gov-frontend-express`) — it lands in `Backlog` — then stop and wait
      for the user to move it to `Todo` (see the rule above). Keep tickets
      small — one reviewable PR's worth of work. Only group multiple
@@ -77,8 +77,9 @@ A one-line title with no description is not enough, even for small changes.
    - A one-line summary of what changed and why.
    - A test plan / how it was verified.
 
-6. **Stop for review.** Do not merge the PR yourself unless explicitly asked —
-   hand back to the user once it's open.
+6. **Move it to In Review** via `save_issue` (`state: "In Review"`) once the PR
+   is open, then **stop**. Do not merge the PR yourself unless explicitly
+   asked — hand back to the user.
 
 7. **On merge**, check whether the GitHub integration already moved the
    issue(s) to `Done` and attached the PR. If it did, nothing to do. If not
@@ -88,8 +89,9 @@ A one-line title with no description is not enough, even for small changes.
 
 ## Notes
 
-- Team's issue states: `Backlog`, `Todo`, `In Progress`, `Done`, `Canceled`,
-  `Duplicate` — there is no "In Review" state, so a ticket stays `In Progress`
-  for the whole PR-open/review period.
+- Team's issue states: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`,
+  `Canceled`, `Duplicate`. A ticket sits in `In Review` for the PR-open/review
+  period, so move it there when the PR goes up rather than leaving it
+  `In Progress`.
 - `main` has GitHub branch protection enabled and rejects direct pushes — all
   changes, with no exceptions, go through a PR.
