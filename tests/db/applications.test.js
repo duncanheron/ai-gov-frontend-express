@@ -1,4 +1,7 @@
+const request = require("supertest");
 const applications = require("../../src/db/applications");
+const createApp = require("../../src/app");
+const { extractCsrfToken } = require("../helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("../helpers/prepareTestDatabase");
 
 describe("applications data module", () => {
@@ -121,5 +124,54 @@ describe("applications data module", () => {
     const found = await applications.get("TEST-NO-FAVOURITE-ANIMAL");
 
     expect(found.favourite_animal).toBeNull();
+  });
+
+  async function submitStandardApplication({ agent, favouriteAnimal }) {
+    const detailsPage = await agent.get("/apply/details");
+    const detailsToken = extractCsrfToken(detailsPage.text);
+    await agent.post("/apply/details").type("form").send({
+      _csrf: detailsToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+      favouriteAnimal,
+    });
+
+    const preferencesPage = await agent.get("/apply/preferences");
+    const preferencesToken = extractCsrfToken(preferencesPage.text);
+    await agent.post("/apply/preferences").type("form").send({ _csrf: preferencesToken });
+
+    const checkAnswers = await agent.get("/apply/check-answers");
+    const checkAnswersToken = extractCsrfToken(checkAnswers.text);
+    const submitFinal = await agent
+      .post("/apply/check-answers")
+      .type("form")
+      .send({ _csrf: checkAnswersToken });
+
+    const confirmation = await agent.get(submitFinal.headers.location);
+    const [, reference] = confirmation.text.match(/([A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3})/);
+    return reference;
+  }
+
+  it("stores a blank favourite animal answer submitted through the full route as NULL, not an empty string", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const reference = await submitStandardApplication({ agent, favouriteAnimal: "" });
+
+    const stored = await applications.get(reference);
+    expect(stored.favourite_animal).toBeNull();
+  });
+
+  it("stores a real favourite animal answer submitted through the full route", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const reference = await submitStandardApplication({ agent, favouriteAnimal: "Otter" });
+
+    const stored = await applications.get(reference);
+    expect(stored.favourite_animal).toBe("Otter");
   });
 });
