@@ -21,6 +21,13 @@ const applyHousingBenefitRouter = require("./routes/applyHousingBenefit");
 const chooseServiceRouter = require("./routes/chooseService");
 const applicationsRouter = require("./routes/applications");
 
+// Cookie and Authorization headers can carry live session/credential values.
+// Redacting them keeps request logs safe to share/aggregate without leaking
+// a way to hijack an active session (see CBLT-95).
+const pinoHttpOptions = {
+  redact: ["req.headers.cookie", "req.headers.authorization"],
+};
+
 function createApp() {
   const app = express();
   app.set("trust proxy", 1);
@@ -35,7 +42,7 @@ function createApp() {
   nunjucksEnv.addGlobal("serviceName", "Submit your application");
   app.set("view engine", "njk");
 
-  app.use(pinoHttp({ logger }));
+  app.use(pinoHttp({ logger, ...pinoHttpOptions }));
   app.use(cspNonce);
   app.use(helmetMiddleware);
   app.use(express.static(path.join(__dirname, "..", "public")));
@@ -67,3 +74,4 @@ function createApp() {
 }
 
 module.exports = createApp;
+module.exports.pinoHttpOptions = pinoHttpOptions;
