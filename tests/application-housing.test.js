@@ -81,6 +81,14 @@ describe("housing application journey - happy path", () => {
 });
 
 describe("housing application journey - guards and validation", () => {
+  it("shows the slashed date of birth hint example", async () => {
+    const app = createApp();
+    const detailsPage = await request(app).get("/apply-housing/details");
+
+    expect(detailsPage.status).toBe(200);
+    expect(detailsPage.text).toContain("For example, 27/3/1985");
+  });
+
   it("shows the error summary and per-field errors for invalid details", async () => {
     const app = createApp();
     const agent = request.agent(app);

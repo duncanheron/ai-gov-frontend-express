@@ -85,6 +85,14 @@ describe("housing benefit (disability) application journey - happy path", () => 
 });
 
 describe("housing benefit (disability) application journey - guards", () => {
+  it("shows the slashed date of birth hint example", async () => {
+    const app = createApp();
+    const detailsPage = await request(app).get("/apply-housing-benefit/details");
+
+    expect(detailsPage.status).toBe(200);
+    expect(detailsPage.text).toContain("For example, 27/3/1985");
+  });
+
   it("blocks disability-details, check-answers and confirmation without completing the details step", async () => {
     const app = createApp();
     const agent = request.agent(app);
