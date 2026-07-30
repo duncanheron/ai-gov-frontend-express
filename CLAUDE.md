@@ -46,3 +46,21 @@ either way is worse than none, because it reads as coverage.
 - `main` is branch-protected; everything goes through a PR.
 - Migrations run in the Vercel build on production deploys — see the README.
   `npm run migrate:up` is for local development only.
+
+## Agents & skills
+
+This repo runs on a two-stage pipeline: `spec-planner` turns a request into
+Linear tickets (`Backlog`, always — a human moves them to `Todo`); `engineer`
+picks up a `Todo` ticket and takes it through branch, code, tests, and PR,
+then hands off to the `agent-skills` plugin's `test-engineer`,
+`code-reviewer`, and `security-auditor` for verification before merge.
+
+- Definitions: `.claude/agents/spec-planner.md`, `.claude/agents/engineer.md`.
+- Repo-specific mechanics (branch naming, PR contents, Linear state
+  transitions) live in `.claude/skills/work-ticket/SKILL.md` — treat it as
+  the source of truth over anything an agent file says, since it's kept
+  current with this repo.
+- General engineering practice (TDD, incremental implementation, git
+  hygiene, etc.) comes from the `agent-skills` plugin
+  (`addyosmani/agent-skills`, enabled as `agent-skills@addy-agent-skills`).
+  Don't re-implement what it already provides.
