@@ -625,12 +625,12 @@ describe("accessibility", () => {
 
     const councilTaxDetail = await request(app).get(`/applications/${councilTaxReference}`);
     expect(councilTaxDetail.text).toContain("Council tax payment");
-    expect(councilTaxDetail.text).toContain(`Council tax - account 12345678, £150.00`);
+    expect(councilTaxDetail.text).toContain("Council tax - account 12345678, £150.00");
     await expectNoViolations(councilTaxDetail.text);
 
     const gardenWasteDetail = await request(app).get(`/applications/${gardenWasteReference}`);
     expect(gardenWasteDetail.text).toContain("Garden waste payment");
-    expect(gardenWasteDetail.text).toContain(`Garden waste - 3 bins, £135.00 per year`);
+    expect(gardenWasteDetail.text).toContain("Garden waste - 3 bins, £135.00 per year");
     await expectNoViolations(gardenWasteDetail.text);
 
     const list = await request(app).get("/applications");
