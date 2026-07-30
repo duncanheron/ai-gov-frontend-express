@@ -1,8 +1,16 @@
 const request = require("supertest");
 const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
+const { queueTestResponses, resetTestResponses } = require("../src/services/routeApplicationFlow");
+
+// Each test queues the router's response, so what's under test is the
+// route/session/view behaviour, not the real prompt's reasoning.
 
 describe("choose service (AI picker)", () => {
+  afterEach(() => {
+    resetTestResponses();
+  });
+
   it("shows the initial free-text question", async () => {
     const app = createApp();
     const response = await request(app).get("/choose-service");
@@ -11,9 +19,16 @@ describe("choose service (AI picker)", () => {
     expect(response.text).toContain("Not sure which service you need");
   });
 
-  it("recommends Housing for a clearly housing-flavoured description once disability has been ruled out, with a working link", async () => {
+  it("shows the clarifying question when the router hasn't decided yet", async () => {
     const app = createApp();
     const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: false,
+      flow: null,
+      clarifyingQuestion: "Does anyone in your household have a registered disability?",
+      noServiceMessage: null,
+    });
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
@@ -25,11 +40,40 @@ describe("choose service (AI picker)", () => {
     expect(submit.status).toBe(302);
     expect(submit.headers.location).toBe("/choose-service");
 
-    // A housing-flavoured description alone doesn't say anything about
-    // disability, so it should ask before deciding, not recommend yet.
     const clarifyPage = await agent.get("/choose-service");
     expect(clarifyPage.status).toBe(200);
-    expect(clarifyPage.text.toLowerCase()).toContain("disability");
+    expect(clarifyPage.text).not.toContain("We recommend");
+    expect(clarifyPage.text).toContain(
+      "Does anyone in your household have a registered disability?",
+    );
+  });
+
+  it("renders the decided outcome with a working link, once the router decides", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: false,
+      flow: null,
+      clarifyingQuestion: "Does anyone in your household have a registered disability?",
+      noServiceMessage: null,
+    });
+    queueTestResponses({
+      decided: true,
+      flow: "housing",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to apply for housing" });
+
+    const clarifyPage = await agent.get("/choose-service");
     const clarifyToken = extractCsrfToken(clarifyPage.text);
 
     await agent
@@ -44,27 +88,16 @@ describe("choose service (AI picker)", () => {
     expect(result.text).toContain("For general housing applications");
   });
 
-  it("asks about disability rather than deciding immediately for a bare 'I am homeless' description", async () => {
+  it("renders the Housing Benefit (disability) decided outcome with a working link", async () => {
     const app = createApp();
     const agent = request.agent(app);
 
-    const askPage = await agent.get("/choose-service");
-    const token = extractCsrfToken(askPage.text);
-
-    await agent
-      .post("/choose-service")
-      .type("form")
-      .send({ _csrf: token, description: "I am homeless" });
-
-    const result = await agent.get("/choose-service");
-    expect(result.status).toBe(200);
-    expect(result.text).not.toContain("We recommend");
-    expect(result.text.toLowerCase()).toContain("disability");
-  });
-
-  it("recommends Housing Benefit (disability) for a clearly disability-flavoured description, with a working link", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    queueTestResponses({
+      decided: true,
+      flow: "housing-benefit-disability",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
@@ -80,7 +113,28 @@ describe("choose service (AI picker)", () => {
     expect(result.text).toContain('href="/apply-housing-benefit/details"');
   });
 
-  it("asks a clarifying question for an ambiguous description, then again for disability, then decides", async () => {
+  it("carries a multi-round clarification journey through several rounds before deciding", async () => {
+    queueTestResponses(
+      {
+        decided: false,
+        flow: null,
+        clarifyingQuestion: "Are you applying because of a disability, or in general?",
+        noServiceMessage: null,
+      },
+      {
+        decided: false,
+        flow: null,
+        clarifyingQuestion: "Does anyone in your household have a registered disability?",
+        noServiceMessage: null,
+      },
+      {
+        decided: true,
+        flow: "housing",
+        clarifyingQuestion: null,
+        noServiceMessage: null,
+      },
+    );
+
     const app = createApp();
     const agent = request.agent(app);
 
@@ -94,7 +148,7 @@ describe("choose service (AI picker)", () => {
 
     const clarifyPage = await agent.get("/choose-service");
     expect(clarifyPage.status).toBe(200);
-    expect(clarifyPage.text.toLowerCase()).toContain("disability");
+    expect(clarifyPage.text).toContain("Are you applying because of a disability, or in general?");
     const token2 = extractCsrfToken(clarifyPage.text);
 
     await agent
@@ -102,11 +156,11 @@ describe("choose service (AI picker)", () => {
       .type("form")
       .send({ _csrf: token2, description: "just a regular housing application" });
 
-    // A housing-flavoured message alone still doesn't say anything about
-    // disability, so this should ask specifically about that, not decide yet.
     const disabilityCheckPage = await agent.get("/choose-service");
     expect(disabilityCheckPage.status).toBe(200);
-    expect(disabilityCheckPage.text.toLowerCase()).toContain("disability");
+    expect(disabilityCheckPage.text).toContain(
+      "Does anyone in your household have a registered disability?",
+    );
     const token3 = extractCsrfToken(disabilityCheckPage.text);
 
     await agent
@@ -119,9 +173,11 @@ describe("choose service (AI picker)", () => {
     expect(result.text).toContain('href="/apply-housing/details"');
   });
 
-  it("shows a plain error message and no crash when the AI call fails, with a way forward", async () => {
+  it("shows a plain error message and no crash when the router throws, with a way forward", async () => {
     const app = createApp();
     const agent = request.agent(app);
+
+    queueTestResponses(new Error("Simulated AI Gateway failure (test-only trigger)"));
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
@@ -129,7 +185,7 @@ describe("choose service (AI picker)", () => {
     const submit = await agent
       .post("/choose-service")
       .type("form")
-      .send({ _csrf: token, description: "simulate-ai-failure" });
+      .send({ _csrf: token, description: "anything" });
 
     expect(submit.status).toBe(503);
     expect(submit.text).toContain("Sorry, there is a problem");
@@ -140,6 +196,13 @@ describe("choose service (AI picker)", () => {
   it("lets you start again after reaching a decision, and reach an independent new recommendation", async () => {
     const app = createApp();
     const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: true,
+      flow: "housing",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
@@ -161,6 +224,13 @@ describe("choose service (AI picker)", () => {
     expect(freshAskPage.text).toContain("Not sure which service you need");
     const freshToken = extractCsrfToken(freshAskPage.text);
 
+    queueTestResponses({
+      decided: true,
+      flow: "housing-benefit-disability",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
     await agent
       .post("/choose-service")
       .type("form")
@@ -171,9 +241,16 @@ describe("choose service (AI picker)", () => {
     expect(secondResult.text).toContain('href="/apply-housing-benefit/details"');
   });
 
-  it("recovers via start-again from an AI failure that happened after an earlier decision", async () => {
+  it("recovers via start-again from a router failure that happened after an earlier decision", async () => {
     const app = createApp();
     const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: true,
+      flow: "housing",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
@@ -185,13 +262,15 @@ describe("choose service (AI picker)", () => {
     const decided = await agent.get("/choose-service");
     expect(decided.text).toContain("We recommend: Housing");
 
+    queueTestResponses(new Error("Simulated AI Gateway failure (test-only trigger)"));
+
     // The "result" view has no form of its own (just a "Continue" button and
     // links), so there's no fresh CSRF token to scrape from it - reuse the
     // token from the initial ask page, which stays valid for the session.
     const failedRetry = await agent
       .post("/choose-service")
       .type("form")
-      .send({ _csrf: token, description: "simulate-ai-failure" });
+      .send({ _csrf: token, description: "anything" });
     expect(failedRetry.status).toBe(503);
     expect(failedRetry.text).toContain('href="/choose-service/start-again"');
 
@@ -203,9 +282,19 @@ describe("choose service (AI picker)", () => {
     expect(freshAskPage.text).not.toContain("We recommend");
   });
 
-  it("honestly says no service is offered for a clearly unrelated description, with a way forward", async () => {
+  it("honestly renders a no-service outcome, with a way forward", async () => {
     const app = createApp();
     const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: true,
+      flow: null,
+      clarifyingQuestion: null,
+      noServiceMessage:
+        "We don't currently offer an online service for that. We can help with general " +
+        "housing applications, or housing benefit if you or your household has a registered " +
+        "disability.",
+    });
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);

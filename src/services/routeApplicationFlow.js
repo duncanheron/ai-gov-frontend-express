@@ -36,6 +36,13 @@ const ROUTING_SCHEMA = z.object({
 // Relax this further later for fully open-ended multi-turn chat.
 const MAX_CLARIFICATION_ROUNDS = 5;
 
+// Exported so tests can exercise the round cap directly; the test stub returns
+// scripted responses and never reaches this.
+function shouldForceDecision(messages) {
+  const userTurns = messages.filter((message) => message.role === "user").length;
+  return userTurns > MAX_CLARIFICATION_ROUNDS;
+}
+
 function buildSystemPrompt(mustDecide) {
   const instruction = mustDecide
     ? "You must conclude now: decide the closer-matching flow if there's any reasonable match, " +
@@ -61,99 +68,43 @@ Available services:
 - "housing-benefit-disability": ${FLOW_DEFINITIONS["housing-benefit-disability"].summary}`;
 }
 
+// Test-only: one scripted response per expected call, FIFO, so a test can
+// script a multi-round conversation. Push an Error instance to make that call
+// throw. Tests script the response rather than this module re-deriving a
+// decision, so their intent lives in the test file.
+let testResponseQueue = [];
+
+function queueTestResponses(...responses) {
+  testResponseQueue.push(...responses);
+}
+
+function resetTestResponses() {
+  testResponseQueue = [];
+}
+
 // All AI-provider-specific code (model string, generateText, Output.object)
 // must live only in this file - nothing else in the codebase should import
 // from "ai" or know about providers. This keeps a future provider swap (e.g.
 // to Azure OpenAI via @ai-sdk/azure) a one-file change.
 async function routeApplicationFlow(messages) {
   if (config.isTest) {
-    const userMessages = messages
-      .filter((message) => message.role === "user")
-      .map((m) => m.content);
-    const lastUserMessage = userMessages[userMessages.length - 1];
-    const userTurns = userMessages.length;
-
-    const mentionsDisability = (content) => /disab/i.test(content);
-    const deniesDisability = (content) =>
-      mentionsDisability(content) &&
-      /\b(no|not|nobody|non|don't|doesn't|isn't|aren't|without)\b/i.test(content);
-    const mentionsHousing = (content) => /hous|home|rent/i.test(content);
-
-    // Disability status established so far, based on the most recent message
-    // that raised it (in either direction) - enough for this stub to prove
-    // the gate below is testable; the real branch's system prompt is what
-    // does the actual nuanced reasoning about a real user's wording.
-    const disabilityMessages = userMessages.filter(mentionsDisability);
-    const lastDisabilityMessage = disabilityMessages[disabilityMessages.length - 1];
-    const disabilityStatus = !lastDisabilityMessage
-      ? "unknown"
-      : deniesDisability(lastDisabilityMessage)
-        ? "no"
-        : "yes";
-
-    // Test-only trigger for simulating an AI Gateway failure (e.g. from the
-    // choose-service route's error-handling tests) - not a real phrase a user
-    // would type.
-    if (/^simulate-ai-failure$/i.test(lastUserMessage.trim())) {
-      throw new Error("Simulated AI Gateway failure (test-only trigger)");
+    if (testResponseQueue.length === 0) {
+      throw new Error(
+        "routeApplicationFlow stub called with no scripted response queued - call " +
+          "queueTestResponses({ decided, flow, clarifyingQuestion, noServiceMessage }) " +
+          "(or an Error, to make this call throw) before exercising code that calls " +
+          "routeApplicationFlow.",
+      );
     }
 
-    // Clearly outside anything on offer: say so honestly instead of forcing a
-    // guess into one of the two real flows.
-    if (/parking|passport|driving licen[cs]e/i.test(lastUserMessage)) {
-      return {
-        decided: true,
-        flow: null,
-        clarifyingQuestion: null,
-        noServiceMessage:
-          "We don't currently offer an online service for that. We can help with general " +
-          "housing applications, or housing benefit if you or your household has a registered " +
-          "disability.",
-      };
+    const next = testResponseQueue.shift();
+    if (next instanceof Error) {
+      throw next;
     }
-
-    if (mentionsDisability(lastUserMessage) || mentionsHousing(lastUserMessage)) {
-      // Mirrors the real branch's system prompt: disability status is the
-      // thing that actually distinguishes these two flows, so don't decide
-      // until it's been established, even if the message otherwise sounds
-      // clearly housing-related.
-      if (disabilityStatus === "unknown") {
-        return {
-          decided: false,
-          flow: null,
-          clarifyingQuestion:
-            "Does anyone in your household have a registered disability that affects your " +
-            "housing needs?",
-          noServiceMessage: null,
-        };
-      }
-      return {
-        decided: true,
-        flow: disabilityStatus === "yes" ? "housing-benefit-disability" : "housing",
-        clarifyingQuestion: null,
-        noServiceMessage: null,
-      };
-    }
-
-    // Genuinely ambiguous (matches neither flow's keywords, and isn't clearly
-    // out of scope either): keep asking, up to the round cap, then force a
-    // decision - mirroring the real branch's MAX_CLARIFICATION_ROUNDS/
-    // mustDecide behaviour.
-    if (userTurns <= MAX_CLARIFICATION_ROUNDS) {
-      return {
-        decided: false,
-        flow: null,
-        clarifyingQuestion:
-          "Are you applying because of a disability, or is this a general housing application?",
-        noServiceMessage: null,
-      };
-    }
-
-    return { decided: true, flow: "housing", clarifyingQuestion: null, noServiceMessage: null };
+    return next;
   }
 
-  const userTurns = messages.filter((message) => message.role === "user").length;
-  const mustDecide = userTurns > MAX_CLARIFICATION_ROUNDS;
+  const mustDecide = shouldForceDecision(messages);
 
   // Imported lazily: "ai" ships ESM-only with no CommonJS build, which Jest's
   // default transform can't parse. Importing it here (rather than at module
@@ -174,4 +125,12 @@ async function routeApplicationFlow(messages) {
   return output;
 }
 
-module.exports = { routeApplicationFlow, FLOW_DEFINITIONS };
+module.exports = {
+  routeApplicationFlow,
+  FLOW_DEFINITIONS,
+  queueTestResponses,
+  resetTestResponses,
+  buildSystemPrompt,
+  shouldForceDecision,
+  MAX_CLARIFICATION_ROUNDS,
+};
