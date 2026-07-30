@@ -3,14 +3,8 @@ const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { queueTestResponses, resetTestResponses } = require("../src/services/routeApplicationFlow");
 
-// These tests drive /choose-service against routeApplicationFlow's scripted
-// test double: each test queues exactly the response(s) it wants the router
-// to return, rather than relying on message content to derive a decision.
-// What's under test here is the route/session/view behaviour built on top of
-// routeApplicationFlow's output - the multi-round clarification journey, the
-// decided outcome, the no-service outcome, and the failure path - not the
-// real system prompt's reasoning (see tests/services/routeApplicationFlow.test.js
-// and this ticket's PR description for how that was proven separately).
+// Each test queues the router's response, so what's under test is the
+// route/session/view behaviour, not the real prompt's reasoning.
 
 describe("choose service (AI picker)", () => {
   afterEach(() => {

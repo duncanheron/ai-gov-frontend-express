@@ -36,12 +36,8 @@ const ROUTING_SCHEMA = z.object({
 // Relax this further later for fully open-ended multi-turn chat.
 const MAX_CLARIFICATION_ROUNDS = 5;
 
-// Counts user turns and reports whether the round cap requires the model to
-// conclude now rather than ask another clarifying question. Pulled out into
-// its own function (rather than inlined where it's used below) purely so
-// tests can exercise the round-counting mechanics directly - the config.isTest
-// stub below returns scripted responses and never calls this itself, so
-// MAX_CLARIFICATION_ROUNDS behaviour would otherwise be untestable under CI.
+// Exported so tests can exercise the round cap directly; the test stub returns
+// scripted responses and never reaches this.
 function shouldForceDecision(messages) {
   const userTurns = messages.filter((message) => message.role === "user").length;
   return userTurns > MAX_CLARIFICATION_ROUNDS;
@@ -72,22 +68,10 @@ Available services:
 - "housing-benefit-disability": ${FLOW_DEFINITIONS["housing-benefit-disability"].summary}`;
 }
 
-// Test-only scripted response queue -----------------------------------------
-//
-// Tests script routeApplicationFlow's return value directly, rather than this
-// module re-deriving a decision from message content. A hand-rolled keyword
-// stub is a different brain to the real system prompt: CBLT-88 fixed a real
-// production bug (the model deciding "housing" too readily without checking
-// disability status) that the old regex stub didn't share, so the full Jest
-// suite stayed green while production was wrong. Scripting the response
-// instead means a test's intent lives in the test file, not re-implemented
-// here.
-//
-// Push one scripted response per expected call, in order (FIFO) - multiple
-// pushes let a test script a multi-round conversation (e.g. clarify, then
-// decide). Push an Error instance to make that call throw instead of
-// returning - this is also how choose-service's AI-failure tests are
-// covered now, replacing the old "simulate-ai-failure" magic string.
+// Test-only: one scripted response per expected call, FIFO, so a test can
+// script a multi-round conversation. Push an Error instance to make that call
+// throw. Tests script the response rather than this module re-deriving a
+// decision, so their intent lives in the test file.
 let testResponseQueue = [];
 
 function queueTestResponses(...responses) {

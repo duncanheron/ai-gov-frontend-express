@@ -8,16 +8,9 @@ const {
 } = require("../../src/services/routeApplicationFlow");
 
 describe("routeApplicationFlow", () => {
-  // These tests run under NODE_ENV=test, so routeApplicationFlow always takes
-  // its config.isTest stub branch below and never makes a network call. The
-  // stub returns exactly what each test scripts via queueTestResponses,
-  // rather than re-deriving a decision from message content - it is a
-  // deterministic double for the surrounding app code (routes, sessions,
-  // views) to exercise against in CI, not a re-implementation of the real
-  // branch's actual reasoning. The real branch's system prompt (see
-  // src/services/routeApplicationFlow.js) is what does the nuanced,
-  // non-scripted work of asking sensible follow-up questions; that can only
-  // be verified by talking to the real model, not by this stub.
+  // Under NODE_ENV=test the router always takes its stub branch and never makes
+  // a network call. The real prompt's reasoning can only be checked against the
+  // real model.
 
   afterEach(() => {
     resetTestResponses();
