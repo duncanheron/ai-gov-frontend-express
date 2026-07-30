@@ -1,8 +1,10 @@
 const request = require("supertest");
 const applications = require("../../src/db/applications");
-const createApp = require("../../src/app");
 const { extractCsrfToken } = require("../helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("../helpers/prepareTestDatabase");
+const { useSharedServer } = require("../helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("applications data module", () => {
   beforeAll(async () => {
@@ -156,8 +158,7 @@ describe("applications data module", () => {
   }
 
   it("stores a blank favourite animal answer submitted through the full route as NULL, not an empty string", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const reference = await submitStandardApplication({ agent, favouriteAnimal: "" });
 
@@ -166,8 +167,7 @@ describe("applications data module", () => {
   });
 
   it("stores a real favourite animal answer submitted through the full route", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const reference = await submitStandardApplication({ agent, favouriteAnimal: "Otter" });
 

@@ -1,7 +1,9 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const applications = require("../src/db/applications");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("applications list page", () => {
   beforeAll(async () => {
@@ -9,9 +11,7 @@ describe("applications list page", () => {
   });
 
   it("shows an empty state when there are no applications", async () => {
-    const app = createApp();
-
-    const response = await request(app).get("/applications");
+    const response = await request(getServer()).get("/applications");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("There are no applications yet.");
@@ -36,8 +36,7 @@ describe("applications list page", () => {
       submittedAt: later,
     });
 
-    const app = createApp();
-    const response = await request(app).get("/applications");
+    const response = await request(getServer()).get("/applications");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Grace Hopper");

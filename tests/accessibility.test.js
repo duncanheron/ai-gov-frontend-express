@@ -1,9 +1,11 @@
 const fs = require("node:fs");
 const request = require("supertest");
 const { JSDOM } = require("jsdom");
-const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 const axeSource = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
@@ -27,26 +29,22 @@ describe("accessibility", () => {
   });
 
   it("homepage has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/");
+    const response = await request(getServer()).get("/");
     await expectNoViolations(response.text);
   });
 
   it("applications list page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/applications");
+    const response = await request(getServer()).get("/applications");
     await expectNoViolations(response.text);
   });
 
   it("details page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/apply/details");
+    const response = await request(getServer()).get("/apply/details");
     await expectNoViolations(response.text);
   });
 
   it("details page with validation errors has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
 
@@ -58,8 +56,7 @@ describe("accessibility", () => {
   });
 
   it("preferences page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -77,8 +74,7 @@ describe("accessibility", () => {
   });
 
   it("check answers and confirmation pages have no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -108,14 +104,12 @@ describe("accessibility", () => {
   });
 
   it("404 page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/not-a-real-page");
+    const response = await request(getServer()).get("/not-a-real-page");
     await expectNoViolations(response.text);
   });
 
   it("applications list page (with rows) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -140,8 +134,7 @@ describe("accessibility", () => {
   });
 
   it("application detail page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -170,20 +163,17 @@ describe("accessibility", () => {
   });
 
   it("application detail page 404 has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/applications/DOES-NOT-EXIST");
+    const response = await request(getServer()).get("/applications/DOES-NOT-EXIST");
     await expectNoViolations(response.text);
   });
 
   it("housing details page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/apply-housing/details");
+    const response = await request(getServer()).get("/apply-housing/details");
     await expectNoViolations(response.text);
   });
 
   it("housing details page with validation errors has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     const detailsPage = await agent.get("/apply-housing/details");
     const token = extractCsrfToken(detailsPage.text);
 
@@ -192,8 +182,7 @@ describe("accessibility", () => {
   });
 
   it("housing situation page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -211,8 +200,7 @@ describe("accessibility", () => {
   });
 
   it("housing situation page with validation errors has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -235,8 +223,7 @@ describe("accessibility", () => {
   });
 
   it("housing check answers page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -261,8 +248,7 @@ describe("accessibility", () => {
   });
 
   it("housing confirmation page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -294,14 +280,12 @@ describe("accessibility", () => {
   });
 
   it("housing benefit details page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/apply-housing-benefit/details");
+    const response = await request(getServer()).get("/apply-housing-benefit/details");
     await expectNoViolations(response.text);
   });
 
   it("housing benefit details page with validation errors has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const token = extractCsrfToken(detailsPage.text);
 
@@ -313,8 +297,7 @@ describe("accessibility", () => {
   });
 
   it("housing benefit disability details page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -332,8 +315,7 @@ describe("accessibility", () => {
   });
 
   it("housing benefit disability details page with validation errors has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -356,8 +338,7 @@ describe("accessibility", () => {
   });
 
   it("housing benefit check answers page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -382,8 +363,7 @@ describe("accessibility", () => {
   });
 
   it("housing benefit confirmation page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -415,14 +395,12 @@ describe("accessibility", () => {
   });
 
   it("choose service ask page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/choose-service");
+    const response = await request(getServer()).get("/choose-service");
     await expectNoViolations(response.text);
   });
 
   it("choose service clarifying question page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
@@ -436,8 +414,7 @@ describe("accessibility", () => {
   });
 
   it("choose service result page has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
@@ -477,14 +454,12 @@ describe("accessibility", () => {
   }
 
   it("council tax details page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/pay-council-tax/details");
+    const response = await request(getServer()).get("/pay-council-tax/details");
     await expectNoViolations(response.text);
   });
 
   it("council tax account page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     await submitCouncilTaxDetails(agent);
 
     const accountPage = await agent.get("/pay-council-tax/account");
@@ -492,8 +467,7 @@ describe("accessibility", () => {
   });
 
   it("council tax account page with a validation error has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     await submitCouncilTaxDetails(agent);
 
     const accountPage = await agent.get("/pay-council-tax/account");
@@ -506,8 +480,7 @@ describe("accessibility", () => {
   });
 
   it("council tax check answers and confirmation pages have no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     await submitCouncilTaxDetails(agent);
 
     const accountPage = await agent.get("/pay-council-tax/account");
@@ -530,14 +503,12 @@ describe("accessibility", () => {
   });
 
   it("garden waste details page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const response = await request(app).get("/pay-garden-waste/details");
+    const response = await request(getServer()).get("/pay-garden-waste/details");
     await expectNoViolations(response.text);
   });
 
   it("garden waste subscription page (empty) has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     await submitGardenWasteDetails(agent);
 
     const subscriptionPage = await agent.get("/pay-garden-waste/subscription");
@@ -545,8 +516,7 @@ describe("accessibility", () => {
   });
 
   it("garden waste subscription page with a validation error has no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     await submitGardenWasteDetails(agent);
 
     const subscriptionPage = await agent.get("/pay-garden-waste/subscription");
@@ -559,8 +529,7 @@ describe("accessibility", () => {
   });
 
   it("garden waste check answers and confirmation pages have no automatically detectable accessibility violations", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
     await submitGardenWasteDetails(agent);
 
     const subscriptionPage = await agent.get("/pay-garden-waste/subscription");
@@ -583,9 +552,7 @@ describe("accessibility", () => {
   });
 
   it("council tax and garden waste applications both render their flow answer on the caseworker detail page and appear in the list", async () => {
-    const app = createApp();
-
-    const councilTaxAgent = request.agent(app);
+    const councilTaxAgent = request.agent(getServer());
     await submitCouncilTaxDetails(councilTaxAgent);
     const councilTaxAccountPage = await councilTaxAgent.get("/pay-council-tax/account");
     const councilTaxAccountToken = extractCsrfToken(councilTaxAccountPage.text);
@@ -604,7 +571,7 @@ describe("accessibility", () => {
       /([A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3})/,
     );
 
-    const gardenWasteAgent = request.agent(app);
+    const gardenWasteAgent = request.agent(getServer());
     await submitGardenWasteDetails(gardenWasteAgent);
     const subscriptionPage = await gardenWasteAgent.get("/pay-garden-waste/subscription");
     const subscriptionToken = extractCsrfToken(subscriptionPage.text);
@@ -623,17 +590,19 @@ describe("accessibility", () => {
       /([A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3})/,
     );
 
-    const councilTaxDetail = await request(app).get(`/applications/${councilTaxReference}`);
+    const councilTaxDetail = await request(getServer()).get(`/applications/${councilTaxReference}`);
     expect(councilTaxDetail.text).toContain("Council tax payment");
     expect(councilTaxDetail.text).toContain("Council tax - account 12345678, £150.00");
     await expectNoViolations(councilTaxDetail.text);
 
-    const gardenWasteDetail = await request(app).get(`/applications/${gardenWasteReference}`);
+    const gardenWasteDetail = await request(getServer()).get(
+      `/applications/${gardenWasteReference}`,
+    );
     expect(gardenWasteDetail.text).toContain("Garden waste payment");
     expect(gardenWasteDetail.text).toContain("Garden waste - 3 bins, £135.00 per year");
     await expectNoViolations(gardenWasteDetail.text);
 
-    const list = await request(app).get("/applications");
+    const list = await request(getServer()).get("/applications");
     expect(list.text).toContain(councilTaxReference);
     expect(list.text).toContain(gardenWasteReference);
   });

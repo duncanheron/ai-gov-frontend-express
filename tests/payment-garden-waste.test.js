@@ -1,8 +1,10 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const applications = require("../src/db/applications");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 async function submitDetails(agent, overrides = {}) {
   const detailsPage = await agent.get("/pay-garden-waste/details");
@@ -33,8 +35,7 @@ describe("garden waste payment journey - happy path", () => {
   ])(
     "completes details -> subscription -> check answers -> confirmation for %s bin(s)",
     async (bins, amount, expectedFlowAnswer) => {
-      const app = createApp();
-      const agent = request.agent(app);
+      const agent = request.agent(getServer());
 
       const detailsPage = await agent.get("/pay-garden-waste/details");
       expect(detailsPage.status).toBe(200);
@@ -99,8 +100,7 @@ describe("garden waste payment journey - happy path", () => {
 
 describe("garden waste payment journey - guards and validation", () => {
   it("shows an error when no bin count is selected", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
 
@@ -118,8 +118,7 @@ describe("garden waste payment journey - guards and validation", () => {
   });
 
   it("shows an error when the bin count is outside the option list", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
 
@@ -136,8 +135,7 @@ describe("garden waste payment journey - guards and validation", () => {
   });
 
   it("does not 500 when bins is submitted as a duplicated parameter, and takes the first value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
 
@@ -158,8 +156,7 @@ describe("garden waste payment journey - guards and validation", () => {
   });
 
   it("blocks check-answers and confirmation without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const checkAnswers = await agent.get("/pay-garden-waste/check-answers");
     expect(checkAnswers.status).toBe(302);
@@ -171,8 +168,7 @@ describe("garden waste payment journey - guards and validation", () => {
   });
 
   it("blocks subscription without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const subscription = await agent.get("/pay-garden-waste/subscription");
     expect(subscription.status).toBe(302);
@@ -180,8 +176,7 @@ describe("garden waste payment journey - guards and validation", () => {
   });
 
   it("blocks check-answers without completing the subscription step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
 
@@ -191,8 +186,7 @@ describe("garden waste payment journey - guards and validation", () => {
   });
 
   it("keeps the garden waste journey session independent from the housing journey", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
 

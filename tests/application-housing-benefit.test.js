@@ -1,8 +1,11 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const applications = require("../src/db/applications");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("housing benefit (disability) application journey - happy path", () => {
   beforeAll(async () => {
@@ -10,8 +13,7 @@ describe("housing benefit (disability) application journey - happy path", () => 
   });
 
   it("completes details -> disability-details -> check answers -> confirmation", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     expect(detailsPage.status).toBe(200);
@@ -86,16 +88,14 @@ describe("housing benefit (disability) application journey - happy path", () => 
 
 describe("housing benefit (disability) application journey - guards", () => {
   it("shows the slashed date of birth hint example", async () => {
-    const app = createApp();
-    const detailsPage = await request(app).get("/apply-housing-benefit/details");
+    const detailsPage = await request(getServer()).get("/apply-housing-benefit/details");
 
     expect(detailsPage.status).toBe(200);
     expect(detailsPage.text).toContain("For example, 27/3/1985");
   });
 
   it("blocks disability-details, check-answers and confirmation without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const disabilityDetails = await agent.get("/apply-housing-benefit/disability-details");
     expect(disabilityDetails.status).toBe(302);
@@ -111,8 +111,7 @@ describe("housing benefit (disability) application journey - guards", () => {
   });
 
   it("blocks check-answers without completing the disability-details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -131,8 +130,7 @@ describe("housing benefit (disability) application journey - guards", () => {
   });
 
   it("keeps this journey's session key independent from the existing /apply journey", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -155,8 +153,7 @@ describe("housing benefit (disability) application journey - guards", () => {
 
 describe("housing benefit (disability) application journey - validation", () => {
   it("shows the error summary and per-field errors for invalid details input", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -178,8 +175,7 @@ describe("housing benefit (disability) application journey - validation", () => 
   });
 
   it("does not 500 when details and disability details are submitted as duplicated parameters, and takes the first value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -217,8 +213,7 @@ describe("housing benefit (disability) application journey - validation", () => 
   });
 
   it("rejects an empty disability details submission, since it is the substance of the application", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -251,8 +246,7 @@ describe("housing benefit (disability) application journey - validation", () => 
   });
 
   it("rejects a disability details submission over the maximum length", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing-benefit/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
