@@ -20,6 +20,8 @@ const applyHousingRouter = require("./routes/applyHousing");
 const applyHousingBenefitRouter = require("./routes/applyHousingBenefit");
 const chooseServiceRouter = require("./routes/chooseService");
 const applicationsRouter = require("./routes/applications");
+const payCouncilTaxRouter = require("./routes/payCouncilTax");
+const payGardenWasteRouter = require("./routes/payGardenWaste");
 
 // Cookie and Authorization headers can carry live session/credential values.
 // Redacting them keeps request logs safe to share/aggregate without leaking
@@ -66,6 +68,8 @@ function createApp() {
   app.use("/apply-housing-benefit", applyHousingBenefitRouter);
   app.use("/choose-service", chooseServiceRouter);
   app.use("/applications", applicationsRouter);
+  app.use("/pay-council-tax", payCouncilTaxRouter);
+  app.use("/pay-garden-waste", payGardenWasteRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

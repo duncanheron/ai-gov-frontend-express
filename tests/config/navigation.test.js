@@ -25,7 +25,7 @@ describe("navigation config", () => {
     expect(items[0].current).toBe(false);
   });
 
-  it("includes an entry for each of the four application flows plus applications", () => {
+  it("includes an entry for each of the six application flows plus applications", () => {
     const items = navigation.forCurrentPath("/");
 
     expect(items).toEqual([
@@ -38,6 +38,8 @@ describe("navigation config", () => {
         current: false,
       },
       { text: "Not sure which service you need?", href: "/choose-service", current: false },
+      { text: "Pay council tax", href: "/pay-council-tax/details", current: false },
+      { text: "Pay for garden waste", href: "/pay-garden-waste/details", current: false },
     ]);
   });
 

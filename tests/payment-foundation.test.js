@@ -195,16 +195,60 @@ describe("pay for garden waste - details step", () => {
   });
 });
 
+describe("session isolation between the two payment flows", () => {
+  it("keeps councilTaxPayment and gardenWastePayment independent, mirroring housingApplication's shape", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    const councilTaxDetailsPage = await agent.get("/pay-council-tax/details");
+    const councilTaxToken = extractCsrfToken(councilTaxDetailsPage.text);
+    await agent.post("/pay-council-tax/details").type("form").send({
+      _csrf: councilTaxToken,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+
+    // The garden waste flow's own details step must not see council tax's
+    // answers - they are stored under separate session keys
+    // (councilTaxPayment vs gardenWastePayment), not shared state.
+    const gardenWasteDetailsPage = await agent.get("/pay-garden-waste/details");
+    expect(gardenWasteDetailsPage.text).not.toContain('value="Ada Lovelace"');
+
+    const gardenWasteToken = extractCsrfToken(gardenWasteDetailsPage.text);
+    await agent.post("/pay-garden-waste/details").type("form").send({
+      _csrf: gardenWasteToken,
+      fullName: "Grace Hopper",
+      email: "grace@example.com",
+      "dateOfBirth-day": "9",
+      "dateOfBirth-month": "12",
+      "dateOfBirth-year": "1906",
+    });
+
+    // And council tax's own saved answers must still be there afterwards,
+    // untouched by the garden waste submission.
+    const councilTaxAgain = await agent.get("/pay-council-tax/details");
+    expect(councilTaxAgain.text).toContain('value="Ada Lovelace"');
+    expect(councilTaxAgain.text).not.toContain('value="Grace Hopper"');
+  });
+});
+
 describe("navigation and homepage", () => {
   it("lists both payment flows on the homepage, linking to their details steps", async () => {
     const app = createApp();
     const response = await request(app).get("/");
 
-    expect(response.text).toContain('href="/pay-council-tax/details"');
-    expect(response.text).toContain("Pay council tax");
-
-    expect(response.text).toContain('href="/pay-garden-waste/details"');
-    expect(response.text).toContain("Pay for garden waste");
+    // Match the homepage body link markup specifically (govuk-link), not
+    // just any occurrence of the href - the header nav also links to these
+    // paths, which would let a broken homepage body link go unnoticed.
+    expect(response.text).toContain(
+      '<a class="govuk-link" href="/pay-council-tax/details">Pay council tax</a>',
+    );
+    expect(response.text).toContain(
+      '<a class="govuk-link" href="/pay-garden-waste/details">Pay for garden waste</a>',
+    );
   });
 
   it("adds nav items for both payment flows, each marked current only on its own page", async () => {
