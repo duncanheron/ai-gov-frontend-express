@@ -1,197 +1,126 @@
-const { routeApplicationFlow } = require("../../src/services/routeApplicationFlow");
+const {
+  routeApplicationFlow,
+  queueTestResponses,
+  resetTestResponses,
+  buildSystemPrompt,
+  shouldForceDecision,
+  MAX_CLARIFICATION_ROUNDS,
+} = require("../../src/services/routeApplicationFlow");
 
 describe("routeApplicationFlow", () => {
   // These tests run under NODE_ENV=test, so routeApplicationFlow always takes
   // its config.isTest stub branch below and never makes a network call. The
-  // stub is a deterministic double for the surrounding app code (routes,
-  // sessions, views) to exercise against in CI - it is not a re-implementation
-  // of the real branch's actual reasoning. The real branch's system prompt
-  // (see src/services/routeApplicationFlow.js) is what does the nuanced,
+  // stub returns exactly what each test scripts via queueTestResponses,
+  // rather than re-deriving a decision from message content - it is a
+  // deterministic double for the surrounding app code (routes, sessions,
+  // views) to exercise against in CI, not a re-implementation of the real
+  // branch's actual reasoning. The real branch's system prompt (see
+  // src/services/routeApplicationFlow.js) is what does the nuanced,
   // non-scripted work of asking sensible follow-up questions; that can only
-  // be verified by talking to the real model (see this ticket's manual
-  // smoke-test acceptance criterion), not by this stub.
+  // be verified by talking to the real model, not by this stub.
 
-  it("routes a disability-flavoured message to the housing-benefit-disability flow immediately", async () => {
-    const messages = [
-      { role: "user", content: "I want to claim housing benefit due to my disability" },
-    ];
-
-    const result = await routeApplicationFlow(messages);
-
-    expect(result).toEqual({
-      decided: true,
-      flow: "housing-benefit-disability",
-      clarifyingQuestion: null,
-      noServiceMessage: null,
-    });
+  afterEach(() => {
+    resetTestResponses();
   });
 
-  it("matches 'disab' case-insensitively anywhere in the last user message", () => {
-    const messages = [{ role: "user", content: "It relates to a DISABILITY I have" }];
-
-    return routeApplicationFlow(messages).then((result) => {
-      expect(result.flow).toBe("housing-benefit-disability");
-    });
-  });
-
-  it("still decides immediately from multi-turn conversations when the last message mentions disability", async () => {
-    // A disability keyword match on the final user message always decides
-    // immediately, regardless of how many rounds have already happened -
-    // this confirms the module doesn't crash on multi-turn history and still
-    // keys off the final user message rather than the whole conversation.
-    const messages = [
-      { role: "user", content: "I need somewhere to live" },
-      { role: "assistant", content: "Can you tell me more about your situation?" },
-      { role: "user", content: "I have a disability and need support with housing" },
-    ];
-
-    const result = await routeApplicationFlow(messages);
-
-    expect(result).toEqual({
-      decided: true,
-      flow: "housing-benefit-disability",
-      clarifyingQuestion: null,
-      noServiceMessage: null,
-    });
-  });
-
-  it("asks about disability before deciding for a bare housing-flavoured message", async () => {
-    // "I am homeless" (or similar) says nothing about disability either way,
-    // so it isn't enough on its own to safely pick between the two flows -
-    // this is the regression this ticket fixes.
-    const result = await routeApplicationFlow([{ role: "user", content: "I am homeless" }]);
-
-    expect(result.decided).toBe(false);
-    expect(result.flow).toBeNull();
-    expect(result.clarifyingQuestion).toEqual(expect.any(String));
-    expect(result.clarifyingQuestion.toLowerCase()).toContain("disab");
-    expect(result.noServiceMessage).toBeNull();
-  });
-
-  it("decides housing once disability has been denied after the initial housing-flavoured message", async () => {
-    const roundOne = await routeApplicationFlow([
-      { role: "user", content: "I need help applying for social housing" },
-    ]);
-    expect(roundOne.decided).toBe(false);
-
-    const roundTwo = await routeApplicationFlow([
-      { role: "user", content: "I need help applying for social housing" },
-      { role: "assistant", content: roundOne.clarifyingQuestion },
-      { role: "user", content: "No, nobody in my household has a disability" },
-    ]);
-
-    expect(roundTwo).toEqual({
+  it("returns exactly the response that was queued", async () => {
+    const response = {
       decided: true,
       flow: "housing",
       clarifyingQuestion: null,
       noServiceMessage: null,
-    });
+    };
+    queueTestResponses(response);
+
+    const result = await routeApplicationFlow([{ role: "user", content: "anything" }]);
+
+    expect(result).toEqual(response);
   });
 
-  it("decides housing-benefit-disability once a later housing-flavoured message follows an earlier disability affirmation", async () => {
-    // The disability question doesn't have to come from the app's own
-    // canned clarifying question - if the user mentions it unprompted in an
-    // earlier round, that's enough for a later housing-flavoured message to
-    // decide immediately, correctly still routing to the disability flow
-    // since that's what the earlier round established.
-    const messages = [
-      { role: "user", content: "I have a disability" },
-      { role: "assistant", content: "Can you tell me more?" },
-      { role: "user", content: "just a regular housing application" },
-    ];
-
-    const result = await routeApplicationFlow(messages);
-
-    expect(result).toEqual({
+  it("consumes multiple queued responses in order, one per call - a scripted multi-round conversation", async () => {
+    const clarify = {
+      decided: false,
+      flow: null,
+      clarifyingQuestion: "Can you tell me more?",
+      noServiceMessage: null,
+    };
+    const decide = {
       decided: true,
       flow: "housing-benefit-disability",
       clarifyingQuestion: null,
       noServiceMessage: null,
-    });
-  });
+    };
+    queueTestResponses(clarify, decide);
 
-  it("asks a clarifying question for a message matching neither flow's keywords", async () => {
-    const result = await routeApplicationFlow([{ role: "user", content: "I need some help" }]);
-
-    expect(result.decided).toBe(false);
-    expect(result.flow).toBeNull();
-    expect(result.clarifyingQuestion).toEqual(expect.any(String));
-    expect(result.noServiceMessage).toBeNull();
-  });
-
-  it("keeps asking across multiple ambiguous rounds, then asks about disability once a housing signal appears", async () => {
-    // MAX_CLARIFICATION_ROUNDS is 5, so a second ambiguous round should still
-    // ask rather than being forced to decide - proving the raised cap
-    // actually allows more than one round of back-and-forth.
-    const roundOne = await routeApplicationFlow([{ role: "user", content: "I need some help" }]);
-    expect(roundOne.decided).toBe(false);
+    const roundOne = await routeApplicationFlow([{ role: "user", content: "first message" }]);
+    expect(roundOne).toEqual(clarify);
 
     const roundTwo = await routeApplicationFlow([
-      { role: "user", content: "I need some help" },
-      { role: "assistant", content: roundOne.clarifyingQuestion },
-      { role: "user", content: "I'm still not sure" },
+      { role: "user", content: "first message" },
+      { role: "assistant", content: clarify.clarifyingQuestion },
+      { role: "user", content: "second message" },
     ]);
-    expect(roundTwo.decided).toBe(false);
-    expect(roundTwo.clarifyingQuestion).toEqual(expect.any(String));
+    expect(roundTwo).toEqual(decide);
+  });
 
-    const roundThree = await routeApplicationFlow([
-      { role: "user", content: "I need some help" },
-      { role: "assistant", content: roundOne.clarifyingQuestion },
-      { role: "user", content: "I'm still not sure" },
-      { role: "assistant", content: roundTwo.clarifyingQuestion },
-      { role: "user", content: "just a regular housing application" },
-    ]);
-    // A housing signal with no disability addressed yet asks about
-    // disability, rather than deciding - it doesn't just decide "housing"
-    // the moment a keyword appears.
-    expect(roundThree.decided).toBe(false);
-    expect(roundThree.clarifyingQuestion.toLowerCase()).toContain("disab");
+  it("throws the queued error instead of returning, when an Error is queued", async () => {
+    queueTestResponses(new Error("Simulated AI Gateway failure"));
 
-    const roundFour = await routeApplicationFlow([
-      { role: "user", content: "I need some help" },
-      { role: "assistant", content: roundOne.clarifyingQuestion },
-      { role: "user", content: "I'm still not sure" },
-      { role: "assistant", content: roundTwo.clarifyingQuestion },
-      { role: "user", content: "just a regular housing application" },
-      { role: "assistant", content: roundThree.clarifyingQuestion },
-      { role: "user", content: "no disability involved" },
-    ]);
-    expect(roundFour).toEqual({
-      decided: true,
-      flow: "housing",
-      clarifyingQuestion: null,
-      noServiceMessage: null,
+    await expect(routeApplicationFlow([{ role: "user", content: "anything" }])).rejects.toThrow(
+      "Simulated AI Gateway failure",
+    );
+  });
+
+  it("throws a clear error when called with nothing queued, rather than silently guessing", async () => {
+    await expect(routeApplicationFlow([{ role: "user", content: "anything" }])).rejects.toThrow(
+      /no scripted response queued/,
+    );
+  });
+
+  describe("shouldForceDecision", () => {
+    it("is false when user turns are within the round cap", () => {
+      const messages = Array.from({ length: MAX_CLARIFICATION_ROUNDS }, () => ({
+        role: "user",
+        content: "still not sure",
+      }));
+
+      expect(shouldForceDecision(messages)).toBe(false);
+    });
+
+    it("is true once user turns exceed the round cap", () => {
+      const messages = Array.from({ length: MAX_CLARIFICATION_ROUNDS + 1 }, () => ({
+        role: "user",
+        content: "still not sure",
+      }));
+
+      expect(shouldForceDecision(messages)).toBe(true);
+    });
+
+    it("only counts user-role messages, ignoring assistant turns", () => {
+      const messages = [
+        { role: "user", content: "one" },
+        { role: "assistant", content: "reply" },
+        { role: "user", content: "two" },
+        { role: "assistant", content: "reply" },
+      ];
+
+      expect(shouldForceDecision(messages)).toBe(false);
     });
   });
 
-  it("forces a decision once the round cap is exceeded, even without a keyword match", async () => {
-    const messages = [{ role: "user", content: "I need some help" }];
-    for (let round = 0; round < 6; round += 1) {
-      messages.push({ role: "assistant", content: "Can you tell me more?" });
-      messages.push({ role: "user", content: "still not sure" });
-    }
+  describe("buildSystemPrompt", () => {
+    it("instructs the model it may still ask a clarifying question when not forced to decide", () => {
+      const prompt = buildSystemPrompt(false);
 
-    const result = await routeApplicationFlow(messages);
+      expect(prompt).toContain("ask exactly one clarifying question");
+      expect(prompt).not.toContain("must conclude now");
+    });
 
-    expect(result.decided).toBe(true);
-    expect(result.flow).toBe("housing");
-    expect(result.noServiceMessage).toBeNull();
-  });
+    it("instructs the model to conclude now, without asking another question, once forced to decide", () => {
+      const prompt = buildSystemPrompt(true);
 
-  it("returns a no-service outcome for a request clearly outside both flows", async () => {
-    const result = await routeApplicationFlow([
-      { role: "user", content: "I want to apply for a parking permit" },
-    ]);
-
-    expect(result.decided).toBe(true);
-    expect(result.flow).toBeNull();
-    expect(result.clarifyingQuestion).toBeNull();
-    expect(result.noServiceMessage).toEqual(expect.any(String));
-  });
-
-  it("throws when given the test-only failure trigger", async () => {
-    await expect(
-      routeApplicationFlow([{ role: "user", content: "simulate-ai-failure" }]),
-    ).rejects.toThrow();
+      expect(prompt).toContain("must conclude now");
+      expect(prompt).toContain("Do not ask another question");
+    });
   });
 });
