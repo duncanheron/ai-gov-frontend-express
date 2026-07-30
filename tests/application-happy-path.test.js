@@ -1,7 +1,9 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("application journey - happy path", () => {
   beforeAll(async () => {
@@ -9,8 +11,7 @@ describe("application journey - happy path", () => {
   });
 
   it("completes start -> details -> preferences -> check answers -> confirmation", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const home = await agent.get("/");
     expect(home.status).toBe(200);
@@ -77,8 +78,7 @@ describe("application journey - happy path", () => {
   });
 
   it("orders the Favourite animal row between Date of birth and Preferences, with a working Change link", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -107,8 +107,7 @@ describe("application journey - happy path", () => {
   });
 
   it("clears a previously entered favourite animal through to check-answers", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -147,8 +146,7 @@ describe("application journey - happy path", () => {
   });
 
   it("completes the journey with no preferences selected, showing None selected", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);

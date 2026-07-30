@@ -1,7 +1,9 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const money = require("../src/lib/money");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("money helper", () => {
   it("exports the epic amount constants", () => {
@@ -28,16 +30,14 @@ describe("money helper", () => {
 
 describe("pay council tax - details step", () => {
   it("shows the Your details form", async () => {
-    const app = createApp();
-    const response = await request(app).get("/pay-council-tax/details");
+    const response = await request(getServer()).get("/pay-council-tax/details");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Your details");
   });
 
   it("stores valid details in the session and redirects to the account step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/pay-council-tax/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -62,8 +62,7 @@ describe("pay council tax - details step", () => {
   });
 
   it("shows the error summary and per-field errors for invalid details", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/pay-council-tax/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -85,8 +84,7 @@ describe("pay council tax - details step", () => {
   });
 
   it("does not 500 when details are submitted as duplicated parameters, and takes the first value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/pay-council-tax/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -114,16 +112,14 @@ describe("pay council tax - details step", () => {
 
 describe("pay for garden waste - details step", () => {
   it("shows the Your details form", async () => {
-    const app = createApp();
-    const response = await request(app).get("/pay-garden-waste/details");
+    const response = await request(getServer()).get("/pay-garden-waste/details");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Your details");
   });
 
   it("stores valid details in the session and redirects to the subscription step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/pay-garden-waste/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -145,8 +141,7 @@ describe("pay for garden waste - details step", () => {
   });
 
   it("shows the error summary and per-field errors for invalid details", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/pay-garden-waste/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -168,8 +163,7 @@ describe("pay for garden waste - details step", () => {
   });
 
   it("does not 500 when details are submitted as duplicated parameters, and takes the first value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/pay-garden-waste/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -197,8 +191,7 @@ describe("pay for garden waste - details step", () => {
 
 describe("session isolation between the two payment flows", () => {
   it("keeps councilTaxPayment and gardenWastePayment independent, mirroring housingApplication's shape", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const councilTaxDetailsPage = await agent.get("/pay-council-tax/details");
     const councilTaxToken = extractCsrfToken(councilTaxDetailsPage.text);
@@ -237,8 +230,7 @@ describe("session isolation between the two payment flows", () => {
 
 describe("navigation and homepage", () => {
   it("lists both payment flows on the homepage, linking to their details steps", async () => {
-    const app = createApp();
-    const response = await request(app).get("/");
+    const response = await request(getServer()).get("/");
 
     // Match the homepage body link markup specifically (govuk-link), not
     // just any occurrence of the href - the header nav also links to these
@@ -252,9 +244,7 @@ describe("navigation and homepage", () => {
   });
 
   it("adds nav items for both payment flows, each marked current only on its own page", async () => {
-    const app = createApp();
-
-    const councilTaxPage = await request(app).get("/pay-council-tax/details");
+    const councilTaxPage = await request(getServer()).get("/pay-council-tax/details");
     expect(councilTaxPage.text).toContain(
       '<a class="govuk-service-navigation__link" href="/pay-council-tax/details" aria-current="page">',
     );
@@ -262,7 +252,7 @@ describe("navigation and homepage", () => {
       '<a class="govuk-service-navigation__link" href="/pay-garden-waste/details" aria-current="page">',
     );
 
-    const gardenWastePage = await request(app).get("/pay-garden-waste/details");
+    const gardenWastePage = await request(getServer()).get("/pay-garden-waste/details");
     expect(gardenWastePage.text).toContain(
       '<a class="govuk-service-navigation__link" href="/pay-garden-waste/details" aria-current="page">',
     );
@@ -270,7 +260,7 @@ describe("navigation and homepage", () => {
       '<a class="govuk-service-navigation__link" href="/pay-council-tax/details" aria-current="page">',
     );
 
-    const home = await request(app).get("/");
+    const home = await request(getServer()).get("/");
     expect(home.text).not.toContain(
       '<a class="govuk-service-navigation__link" href="/pay-council-tax/details" aria-current="page">',
     );

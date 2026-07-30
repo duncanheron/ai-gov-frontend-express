@@ -1,7 +1,9 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const applications = require("../src/db/applications");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("application detail page", () => {
   beforeAll(async () => {
@@ -17,9 +19,7 @@ describe("application detail page", () => {
   });
 
   it("shows full application details for a known reference", async () => {
-    const app = createApp();
-
-    const response = await request(app).get("/applications/TEST-DETAIL");
+    const response = await request(getServer()).get("/applications/TEST-DETAIL");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Ada Lovelace");
@@ -40,8 +40,7 @@ describe("application detail page", () => {
       preferences: ["food", "ai"],
     });
 
-    const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL-PREFS");
+    const response = await request(getServer()).get("/applications/TEST-DETAIL-PREFS");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Food, Artificial intelligence (AI)");
@@ -58,8 +57,7 @@ describe("application detail page", () => {
       flowAnswer: "Renting privately",
     });
 
-    const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL-HOUSING");
+    const response = await request(getServer()).get("/applications/TEST-DETAIL-HOUSING");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Housing situation");
@@ -77,8 +75,7 @@ describe("application detail page", () => {
       flowAnswer: "Some disability details text",
     });
 
-    const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL-DISABILITY");
+    const response = await request(getServer()).get("/applications/TEST-DETAIL-DISABILITY");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Disability details");
@@ -95,8 +92,7 @@ describe("application detail page", () => {
       favouriteAnimal: "Otter",
     });
 
-    const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL-FAVOURITE-ANIMAL");
+    const response = await request(getServer()).get("/applications/TEST-DETAIL-FAVOURITE-ANIMAL");
 
     expect(response.status).toBe(200);
     expect(response.text).toMatch(
@@ -105,10 +101,8 @@ describe("application detail page", () => {
   });
 
   it("shows no favourite animal row when favourite_animal is NULL, regardless of flow", async () => {
-    const app = createApp();
-
     for (const reference of ["TEST-DETAIL", "TEST-DETAIL-HOUSING", "TEST-DETAIL-DISABILITY"]) {
-      const response = await request(app).get(`/applications/${reference}`);
+      const response = await request(getServer()).get(`/applications/${reference}`);
 
       expect(response.status).toBe(200);
       expect(response.text).not.toContain("Favourite animal");
@@ -125,16 +119,16 @@ describe("application detail page", () => {
       favouriteAnimal: "",
     });
 
-    const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL-EMPTY-FAVOURITE-ANIMAL");
+    const response = await request(getServer()).get(
+      "/applications/TEST-DETAIL-EMPTY-FAVOURITE-ANIMAL",
+    );
 
     expect(response.status).toBe(200);
     expect(response.text).not.toContain("Favourite animal");
   });
 
   it("shows no flow-specific row for a standard flow application", async () => {
-    const app = createApp();
-    const response = await request(app).get("/applications/TEST-DETAIL");
+    const response = await request(getServer()).get("/applications/TEST-DETAIL");
 
     expect(response.status).toBe(200);
     expect(response.text).not.toContain("Housing situation");
@@ -142,9 +136,7 @@ describe("application detail page", () => {
   });
 
   it("returns a 404 for an unknown reference", async () => {
-    const app = createApp();
-
-    const response = await request(app).get("/applications/DOES-NOT-EXIST");
+    const response = await request(getServer()).get("/applications/DOES-NOT-EXIST");
 
     expect(response.status).toBe(404);
   });

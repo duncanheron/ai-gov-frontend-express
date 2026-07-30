@@ -1,18 +1,18 @@
 const request = require("supertest");
-const createApp = require("../src/app");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("header navigation", () => {
   it("homepage shows the service name linking to the homepage, and no external gov.uk logo link", async () => {
-    const app = createApp();
-    const response = await request(app).get("/");
+    const response = await request(getServer()).get("/");
 
     expect(response.text).toContain('<a href="/" class="govuk-service-navigation__link">');
     expect(response.text).not.toContain("//gov.uk");
   });
 
   it("homepage has a link to the applications list", async () => {
-    const app = createApp();
-    const response = await request(app).get("/");
+    const response = await request(getServer()).get("/");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/applications">',
@@ -21,8 +21,7 @@ describe("header navigation", () => {
   });
 
   it("shows all five nav items on every page", async () => {
-    const app = createApp();
-    const response = await request(app).get("/");
+    const response = await request(getServer()).get("/");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/applications">',
@@ -45,22 +44,19 @@ describe("header navigation", () => {
   });
 
   it("does not mark the applications nav link as current on the homepage or apply journey", async () => {
-    const app = createApp();
-
-    const home = await request(app).get("/");
+    const home = await request(getServer()).get("/");
     expect(home.text).not.toContain(
       '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
     );
 
-    const details = await request(app).get("/apply/details");
+    const details = await request(getServer()).get("/apply/details");
     expect(details.text).not.toContain(
       '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
     );
   });
 
   it("marks the applications nav link as current on the applications list page", async () => {
-    const app = createApp();
-    const response = await request(app).get("/applications");
+    const response = await request(getServer()).get("/applications");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
@@ -68,8 +64,7 @@ describe("header navigation", () => {
   });
 
   it("marks the applications nav link as current on an applications detail page", async () => {
-    const app = createApp();
-    const response = await request(app).get("/applications/DOES-NOT-EXIST");
+    const response = await request(getServer()).get("/applications/DOES-NOT-EXIST");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
@@ -77,8 +72,7 @@ describe("header navigation", () => {
   });
 
   it("marks the apply nav link as current on the apply journey, and no others", async () => {
-    const app = createApp();
-    const response = await request(app).get("/apply/details");
+    const response = await request(getServer()).get("/apply/details");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/apply/details" aria-current="page">',
@@ -95,8 +89,7 @@ describe("header navigation", () => {
   });
 
   it("marks the apply-housing nav link as current on the housing journey, and no others", async () => {
-    const app = createApp();
-    const response = await request(app).get("/apply-housing/details");
+    const response = await request(getServer()).get("/apply-housing/details");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/apply-housing/details" aria-current="page">',
@@ -113,8 +106,7 @@ describe("header navigation", () => {
   });
 
   it("marks the apply-housing-benefit nav link as current on the housing benefit journey, and no others", async () => {
-    const app = createApp();
-    const response = await request(app).get("/apply-housing-benefit/details");
+    const response = await request(getServer()).get("/apply-housing-benefit/details");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/apply-housing-benefit/details" aria-current="page">',
@@ -131,8 +123,7 @@ describe("header navigation", () => {
   });
 
   it("marks the choose-service nav link as current on the choose-service page, and no others", async () => {
-    const app = createApp();
-    const response = await request(app).get("/choose-service");
+    const response = await request(getServer()).get("/choose-service");
 
     expect(response.text).toContain(
       '<a class="govuk-service-navigation__link" href="/choose-service" aria-current="page">',
@@ -149,8 +140,7 @@ describe("header navigation", () => {
   });
 
   it("homepage lists and links to all four application flows", async () => {
-    const app = createApp();
-    const response = await request(app).get("/");
+    const response = await request(getServer()).get("/");
 
     expect(response.text).toContain('href="/apply/details"');
     expect(response.text).toContain(">Apply<");

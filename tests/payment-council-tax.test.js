@@ -1,8 +1,10 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const applications = require("../src/db/applications");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 async function submitDetails(agent) {
   const detailsPage = await agent.get("/pay-council-tax/details");
@@ -23,8 +25,7 @@ describe("council tax payment journey - happy path", () => {
   });
 
   it("completes start -> details -> account -> check answers -> confirmation", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const submitDetailsResponse = await submitDetails(agent);
     expect(submitDetailsResponse.status).toBe(302);
@@ -84,8 +85,7 @@ describe("council tax payment journey - happy path", () => {
 
 describe("council tax payment journey - guards and validation", () => {
   it("shows the error summary and per-field error for an empty account number", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
     const accountPage = await agent.get("/pay-council-tax/account");
@@ -104,8 +104,7 @@ describe("council tax payment journey - guards and validation", () => {
   it.each(["1234567", "123456789", "1234567a"])(
     "rejects %s as not 8 digits",
     async (accountNumber) => {
-      const app = createApp();
-      const agent = request.agent(app);
+      const agent = request.agent(getServer());
 
       await submitDetails(agent);
       const accountPage = await agent.get("/pay-council-tax/account");
@@ -122,8 +121,7 @@ describe("council tax payment journey - guards and validation", () => {
   );
 
   it("does not 500 when the account number is submitted as a duplicated parameter, and takes the first value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
     const accountPage = await agent.get("/pay-council-tax/account");
@@ -143,8 +141,7 @@ describe("council tax payment journey - guards and validation", () => {
   });
 
   it("blocks check-answers and confirmation without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const checkAnswers = await agent.get("/pay-council-tax/check-answers");
     expect(checkAnswers.status).toBe(302);
@@ -156,8 +153,7 @@ describe("council tax payment journey - guards and validation", () => {
   });
 
   it("blocks account without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const account = await agent.get("/pay-council-tax/account");
     expect(account.status).toBe(302);
@@ -165,8 +161,7 @@ describe("council tax payment journey - guards and validation", () => {
   });
 
   it("blocks check-answers without completing the account step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     await submitDetails(agent);
 

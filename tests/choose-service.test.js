@@ -1,7 +1,9 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { queueTestResponses, resetTestResponses } = require("../src/services/routeApplicationFlow");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 // Each test queues the router's response, so what's under test is the
 // route/session/view behaviour, not the real prompt's reasoning.
@@ -12,16 +14,14 @@ describe("choose service (AI picker)", () => {
   });
 
   it("shows the initial free-text question", async () => {
-    const app = createApp();
-    const response = await request(app).get("/choose-service");
+    const response = await request(getServer()).get("/choose-service");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Not sure which service you need");
   });
 
   it("shows the clarifying question when the router hasn't decided yet", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: false,
@@ -49,8 +49,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("renders the decided outcome with a working link, once the router decides", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: false,
@@ -89,8 +88,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("renders the Housing Benefit (disability) decided outcome with a working link", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,
@@ -135,8 +133,7 @@ describe("choose service (AI picker)", () => {
       },
     );
 
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const askPage = await agent.get("/choose-service");
     const token1 = extractCsrfToken(askPage.text);
@@ -174,8 +171,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("shows a plain error message and no crash when the router throws, with a way forward", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses(new Error("Simulated AI Gateway failure (test-only trigger)"));
 
@@ -194,8 +190,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("lets you start again after reaching a decision, and reach an independent new recommendation", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,
@@ -242,8 +237,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("recovers via start-again from a router failure that happened after an earlier decision", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,
@@ -283,8 +277,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("decides `council-tax` for a council tax bill message, without clarification", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,
@@ -307,8 +300,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("decides `garden-waste` for a green bin collection message, without clarification", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,
@@ -330,8 +322,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("asks a clarifying question for an ambiguous 'pay the council' message before deciding between the payment services", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: false,
@@ -370,8 +361,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("still gates a housing decision on disability status once payment services are also available", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: false,
@@ -396,8 +386,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("never asks about disability for a payment message", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,
@@ -420,8 +409,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("honestly renders a no-service outcome naming all four services, with a way forward", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,
@@ -449,8 +437,7 @@ describe("choose service (AI picker)", () => {
   });
 
   it("honestly renders a no-service outcome, with a way forward", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     queueTestResponses({
       decided: true,

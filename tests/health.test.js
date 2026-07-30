@@ -1,10 +1,11 @@
 const request = require("supertest");
-const createApp = require("../src/app");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("GET /health", () => {
   it("returns 200 ok", async () => {
-    const app = createApp();
-    const response = await request(app).get("/health");
+    const response = await request(getServer()).get("/health");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: "ok" });

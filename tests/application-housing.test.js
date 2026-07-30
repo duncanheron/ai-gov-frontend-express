@@ -1,8 +1,10 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const applications = require("../src/db/applications");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 
 describe("housing application journey - happy path", () => {
   beforeAll(async () => {
@@ -10,8 +12,7 @@ describe("housing application journey - happy path", () => {
   });
 
   it("completes start -> details -> situation -> check answers -> confirmation", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     expect(detailsPage.status).toBe(200);
@@ -82,16 +83,14 @@ describe("housing application journey - happy path", () => {
 
 describe("housing application journey - guards and validation", () => {
   it("shows the slashed date of birth hint example", async () => {
-    const app = createApp();
-    const detailsPage = await request(app).get("/apply-housing/details");
+    const detailsPage = await request(getServer()).get("/apply-housing/details");
 
     expect(detailsPage.status).toBe(200);
     expect(detailsPage.text).toContain("For example, 27/3/1985");
   });
 
   it("shows the error summary and per-field errors for invalid details", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -113,8 +112,7 @@ describe("housing application journey - guards and validation", () => {
   });
 
   it("does not 500 when details and situation are submitted as duplicated parameters, and takes the first value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -152,8 +150,7 @@ describe("housing application journey - guards and validation", () => {
   });
 
   it("shows an error when no housing situation is selected", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -180,8 +177,7 @@ describe("housing application journey - guards and validation", () => {
   });
 
   it("blocks check-answers and confirmation without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const checkAnswers = await agent.get("/apply-housing/check-answers");
     expect(checkAnswers.status).toBe(302);
@@ -193,8 +189,7 @@ describe("housing application journey - guards and validation", () => {
   });
 
   it("blocks situation without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const situation = await agent.get("/apply-housing/situation");
     expect(situation.status).toBe(302);
@@ -202,8 +197,7 @@ describe("housing application journey - guards and validation", () => {
   });
 
   it("blocks check-answers without completing the situation step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -222,8 +216,7 @@ describe("housing application journey - guards and validation", () => {
   });
 
   it("keeps the housing journey session independent from the standard apply journey", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply-housing/details");
     const detailsToken = extractCsrfToken(detailsPage.text);

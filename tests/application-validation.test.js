@@ -1,6 +1,8 @@
 const request = require("supertest");
-const createApp = require("../src/app");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
+const { useSharedServer } = require("./helpers/testServer");
+
+const getServer = useSharedServer();
 const {
   toStr,
   validateDetails,
@@ -91,16 +93,14 @@ describe("validateDetails (shared by the housing flows)", () => {
 
 describe("application journey - validation", () => {
   it("shows the slashed date of birth hint example", async () => {
-    const app = createApp();
-    const detailsPage = await request(app).get("/apply/details");
+    const detailsPage = await request(getServer()).get("/apply/details");
 
     expect(detailsPage.status).toBe(200);
     expect(detailsPage.text).toContain("For example, 27/3/1985");
   });
 
   it("shows the error summary and per-field errors for invalid input", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -122,8 +122,7 @@ describe("application journey - validation", () => {
   });
 
   it("does not 500 when every scalar field is submitted as a duplicated parameter, and takes the first value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -151,8 +150,7 @@ describe("application journey - validation", () => {
   });
 
   it("shows a favouriteAnimal error, keeps the entered value, and points at the field for a too-long submission", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -175,8 +173,7 @@ describe("application journey - validation", () => {
   });
 
   it("renders the favouriteAnimal input wired to the correct field name and value", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -196,8 +193,7 @@ describe("application journey - validation", () => {
   });
 
   it("repopulates then clears the favouriteAnimal value across two submissions", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const token = extractCsrfToken(detailsPage.text);
@@ -232,8 +228,7 @@ describe("application journey - validation", () => {
   });
 
   it("blocks check-answers and confirmation without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const checkAnswers = await agent.get("/apply/check-answers");
     expect(checkAnswers.status).toBe(302);
@@ -245,8 +240,7 @@ describe("application journey - validation", () => {
   });
 
   it("blocks preferences without completing the details step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const preferences = await agent.get("/apply/preferences");
     expect(preferences.status).toBe(302);
@@ -254,8 +248,7 @@ describe("application journey - validation", () => {
   });
 
   it("blocks check-answers without completing the preferences step", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -274,8 +267,7 @@ describe("application journey - validation", () => {
   });
 
   it("accepts a single checked preference sent as a plain string, not an array", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -302,8 +294,7 @@ describe("application journey - validation", () => {
   });
 
   it("does not wipe a previously submitted preferences answer when re-editing details", async () => {
-    const app = createApp();
-    const agent = request.agent(app);
+    const agent = request.agent(getServer());
 
     const detailsPage = await agent.get("/apply/details");
     const detailsToken = extractCsrfToken(detailsPage.text);
@@ -341,8 +332,7 @@ describe("application journey - validation", () => {
   });
 
   it("returns 404 for an unknown route", async () => {
-    const app = createApp();
-    const response = await request(app).get("/not-a-real-page");
+    const response = await request(getServer()).get("/not-a-real-page");
 
     expect(response.status).toBe(404);
     expect(response.text).toContain("Page not found");
