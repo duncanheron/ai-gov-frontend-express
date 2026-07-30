@@ -282,6 +282,172 @@ describe("choose service (AI picker)", () => {
     expect(freshAskPage.text).not.toContain("We recommend");
   });
 
+  it("decides `council-tax` for a council tax bill message, without clarification", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: true,
+      flow: "council-tax",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I need to pay my council tax bill" });
+
+    const result = await agent.get("/choose-service");
+    expect(result.text).toContain("We recommend: Council Tax");
+    expect(result.text).not.toContain("registered disability");
+  });
+
+  it("decides `garden-waste` for a green bin collection message, without clarification", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: true,
+      flow: "garden-waste",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I need to pay for my green bin collection" });
+
+    const result = await agent.get("/choose-service");
+    expect(result.text).toContain("We recommend: Garden Waste");
+  });
+
+  it("asks a clarifying question for an ambiguous 'pay the council' message before deciding between the payment services", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: false,
+      flow: null,
+      clarifyingQuestion: "Is this for your council tax bill, or a garden waste subscription?",
+      noServiceMessage: null,
+    });
+    queueTestResponses({
+      decided: true,
+      flow: "garden-waste",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to pay the council" });
+
+    const clarifyPage = await agent.get("/choose-service");
+    expect(clarifyPage.text).toContain(
+      "Is this for your council tax bill, or a garden waste subscription?",
+    );
+    const clarifyToken = extractCsrfToken(clarifyPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: clarifyToken, description: "Garden waste" });
+
+    const result = await agent.get("/choose-service");
+    expect(result.text).toContain("We recommend: Garden Waste");
+  });
+
+  it("still gates a housing decision on disability status once payment services are also available", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: false,
+      flow: null,
+      clarifyingQuestion: "Does anyone in your household have a registered disability?",
+      noServiceMessage: null,
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to apply for housing" });
+
+    const clarifyPage = await agent.get("/choose-service");
+    expect(clarifyPage.text).toContain(
+      "Does anyone in your household have a registered disability?",
+    );
+    expect(clarifyPage.text).not.toContain("We recommend");
+  });
+
+  it("never asks about disability for a payment message", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: true,
+      flow: "council-tax",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to pay my council tax" });
+
+    const result = await agent.get("/choose-service");
+    expect(result.text).not.toContain("registered disability");
+    expect(result.text).toContain("We recommend: Council Tax");
+  });
+
+  it("honestly renders a no-service outcome naming all four services, with a way forward", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+
+    queueTestResponses({
+      decided: true,
+      flow: null,
+      clarifyingQuestion: null,
+      noServiceMessage:
+        "We don't currently offer an online service for that. We can help with general housing " +
+        "applications, housing benefit if you or your household has a registered disability, " +
+        "paying your council tax, or paying for a garden waste subscription.",
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I want to apply for a parking permit" });
+
+    const result = await agent.get("/choose-service");
+    expect(result.text).toContain("general housing applications");
+    expect(result.text).toContain("housing benefit");
+    expect(result.text).toContain("council tax");
+    expect(result.text).toContain("garden waste");
+  });
+
   it("honestly renders a no-service outcome, with a way forward", async () => {
     const app = createApp();
     const agent = request.agent(app);
