@@ -5,6 +5,8 @@ const {
   buildSystemPrompt,
   shouldForceDecision,
   MAX_CLARIFICATION_ROUNDS,
+  FLOW_DEFINITIONS,
+  ROUTING_SCHEMA,
 } = require("../../src/services/routeApplicationFlow");
 
 describe("routeApplicationFlow", () => {
@@ -114,6 +116,83 @@ describe("routeApplicationFlow", () => {
 
       expect(prompt).toContain("must conclude now");
       expect(prompt).toContain("Do not ask another question");
+    });
+
+    it("lists all four services, sourced from FLOW_DEFINITIONS", () => {
+      const prompt = buildSystemPrompt(false);
+
+      expect(prompt).toContain('"housing":');
+      expect(prompt).toContain('"housing-benefit-disability":');
+      expect(prompt).toContain('"council-tax":');
+      expect(prompt).toContain('"garden-waste":');
+    });
+
+    it("distinguishes council tax from garden waste as compulsory tax vs optional subscription", () => {
+      const prompt = buildSystemPrompt(false);
+
+      expect(prompt).toMatch(/council tax.*compulsory/is);
+      expect(prompt).toMatch(/garden waste.*optional/is);
+    });
+
+    it("tells the model to ask which payment service when a message only says 'pay the council'", () => {
+      const prompt = buildSystemPrompt(false);
+
+      expect(prompt).toMatch(/only says.*pay the council.*ask which service/is);
+    });
+
+    it("scopes the disability guidance to housing enquiries, excluding payment queries", () => {
+      const prompt = buildSystemPrompt(false);
+
+      expect(prompt).toMatch(/housing enquiries.*disability/is);
+      expect(prompt).toContain("does not apply to council tax or garden waste");
+    });
+
+    it("instructs the model to name all four services when none of them fit", () => {
+      const prompt = buildSystemPrompt(false);
+
+      expect(prompt).toMatch(/none.*fit.*name all of them/is);
+    });
+  });
+
+  describe("FLOW_DEFINITIONS", () => {
+    it("defines a label and summary for each of the four flows", () => {
+      expect(Object.keys(FLOW_DEFINITIONS)).toEqual([
+        "housing",
+        "housing-benefit-disability",
+        "council-tax",
+        "garden-waste",
+      ]);
+      Object.values(FLOW_DEFINITIONS).forEach((definition) => {
+        expect(typeof definition.label).toBe("string");
+        expect(definition.summary.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe("ROUTING_SCHEMA", () => {
+    it.each(["housing", "housing-benefit-disability", "council-tax", "garden-waste", null])(
+      "accepts flow value %p",
+      (flow) => {
+        const result = ROUTING_SCHEMA.safeParse({
+          decided: true,
+          flow,
+          clarifyingQuestion: null,
+          noServiceMessage: null,
+        });
+
+        expect(result.success).toBe(true);
+      },
+    );
+
+    it("rejects a flow id outside the four known services", () => {
+      const result = ROUTING_SCHEMA.safeParse({
+        decided: true,
+        flow: "parking-permit",
+        clarifyingQuestion: null,
+        noServiceMessage: null,
+      });
+
+      expect(result.success).toBe(false);
     });
   });
 });

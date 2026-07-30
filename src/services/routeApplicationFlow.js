@@ -20,11 +20,23 @@ const FLOW_DEFINITIONS = {
       "example if you or someone in your household has a registered disability that affects " +
       "your housing needs.",
   },
+  "council-tax": {
+    label: "Council Tax",
+    summary:
+      "For paying council tax - the compulsory annual property tax every household owes the " +
+      "council, regardless of which services they use.",
+  },
+  "garden-waste": {
+    label: "Garden Waste",
+    summary:
+      "For paying the garden waste subscription - an optional paid service for collecting " +
+      "garden and green waste from an extra bin, renewed each year.",
+  },
 };
 
 const ROUTING_SCHEMA = z.object({
   decided: z.boolean(),
-  flow: z.enum(["housing", "housing-benefit-disability"]).nullable(),
+  flow: z.enum(Object.keys(FLOW_DEFINITIONS)).nullable(),
   clarifyingQuestion: z.string().nullable(),
   noServiceMessage: z.string().nullable(),
 });
@@ -46,26 +58,45 @@ function shouldForceDecision(messages) {
 function buildSystemPrompt(mustDecide) {
   const instruction = mustDecide
     ? "You must conclude now: decide the closer-matching flow if there's any reasonable match, " +
-      "or say no service is available if truly neither fits. Do not ask another question."
+      "or say no service is available if truly none fits. Do not ask another question."
     : "Decide the flow if you're confident it matches one of the services below. If you're not " +
-      "sure, ask exactly one clarifying question. If the user's need clearly doesn't match " +
-      "either service, say so honestly rather than forcing a guess.";
+      "sure, ask exactly one clarifying question. If the user's need clearly doesn't match any " +
+      "service, say so honestly rather than forcing a guess.";
 
   const disabilityGuidance =
-    "Whether the applicant or anyone in their household has a registered disability affecting " +
-    "their housing needs is the key thing that distinguishes these two services - do not assume " +
-    "either way just because a message otherwise sounds clearly housing-related (for example, " +
-    "being homeless or needing to rent says nothing about disability either way). Unless " +
-    "disability status has already been addressed earlier in the conversation, ask about it " +
-    'before deciding, even when everything else about the situation points at "housing".';
+    "For housing enquiries, whether the applicant or anyone in their household has a " +
+    "registered disability affecting their housing needs is the key thing that distinguishes " +
+    '"housing" from "housing-benefit-disability" - do not assume either way just because a ' +
+    "message sounds housing-related. Unless disability status has already been addressed " +
+    "earlier in the conversation, ask about it before deciding, even when everything else " +
+    'points at "housing". This does not apply to council tax or garden waste - a payment ' +
+    "query is never about disability status.";
+
+  const paymentGuidance =
+    "Council tax and garden waste are both ways of paying the council, but are different " +
+    "services: council tax is the compulsory annual property tax bill, while garden waste is " +
+    "an optional paid subscription for garden/green bin collection. Where a message only says " +
+    "the user wants to pay the council, without saying which, ask which service they mean " +
+    "rather than guessing.";
+
+  const noServiceGuidance =
+    "If none of the services below fit, name all of them in your reply so the user knows " +
+    "what's actually on offer, rather than just saying no.";
+
+  const serviceList = Object.entries(FLOW_DEFINITIONS)
+    .map(([id, { summary }]) => `- "${id}": ${summary}`)
+    .join("\n");
 
   return `${instruction}
 
 ${disabilityGuidance}
 
+${paymentGuidance}
+
+${noServiceGuidance}
+
 Available services:
-- "housing": ${FLOW_DEFINITIONS.housing.summary}
-- "housing-benefit-disability": ${FLOW_DEFINITIONS["housing-benefit-disability"].summary}`;
+${serviceList}`;
 }
 
 // Test-only: one scripted response per expected call, FIFO, so a test can
@@ -128,6 +159,7 @@ async function routeApplicationFlow(messages) {
 module.exports = {
   routeApplicationFlow,
   FLOW_DEFINITIONS,
+  ROUTING_SCHEMA,
   queueTestResponses,
   resetTestResponses,
   buildSystemPrompt,
