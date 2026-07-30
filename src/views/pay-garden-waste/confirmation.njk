@@ -1,0 +1,16 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+
+{% block pageTitle %}Payment complete{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {{ govukPanel({ titleText: "Payment complete", html: "Your reference number<br><strong>" + reference + "</strong>" }) }}
+    <p class="govuk-body">This is a demo service. No payment will be taken.</p>
+    <h2 class="govuk-heading-m">What happens next</h2>
+    <p class="govuk-body">We have received your garden waste payment details. Keep a note of your reference number in case you need to contact us about it.</p>
+    <p class="govuk-body"><a class="govuk-link" href="/">Return to the start page</a></p>
+  </div>
+</div>
+{% endblock %}
