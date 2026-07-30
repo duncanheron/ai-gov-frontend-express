@@ -449,4 +449,192 @@ describe("accessibility", () => {
     const resultPage = await agent.get("/choose-service");
     await expectNoViolations(resultPage.text);
   });
+
+  async function submitCouncilTaxDetails(agent) {
+    const detailsPage = await agent.get("/pay-council-tax/details");
+    const token = extractCsrfToken(detailsPage.text);
+    return agent.post("/pay-council-tax/details").type("form").send({
+      _csrf: token,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+  }
+
+  async function submitGardenWasteDetails(agent) {
+    const detailsPage = await agent.get("/pay-garden-waste/details");
+    const token = extractCsrfToken(detailsPage.text);
+    return agent.post("/pay-garden-waste/details").type("form").send({
+      _csrf: token,
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      "dateOfBirth-day": "27",
+      "dateOfBirth-month": "3",
+      "dateOfBirth-year": "1985",
+    });
+  }
+
+  it("council tax details page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const response = await request(app).get("/pay-council-tax/details");
+    await expectNoViolations(response.text);
+  });
+
+  it("council tax account page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    await submitCouncilTaxDetails(agent);
+
+    const accountPage = await agent.get("/pay-council-tax/account");
+    await expectNoViolations(accountPage.text);
+  });
+
+  it("council tax account page with a validation error has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    await submitCouncilTaxDetails(agent);
+
+    const accountPage = await agent.get("/pay-council-tax/account");
+    const token = extractCsrfToken(accountPage.text);
+    const response = await agent
+      .post("/pay-council-tax/account")
+      .type("form")
+      .send({ _csrf: token, accountNumber: "" });
+    await expectNoViolations(response.text);
+  });
+
+  it("council tax check answers and confirmation pages have no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    await submitCouncilTaxDetails(agent);
+
+    const accountPage = await agent.get("/pay-council-tax/account");
+    const accountToken = extractCsrfToken(accountPage.text);
+    await agent
+      .post("/pay-council-tax/account")
+      .type("form")
+      .send({ _csrf: accountToken, accountNumber: "12345678" });
+
+    const checkAnswers = await agent.get("/pay-council-tax/check-answers");
+    await expectNoViolations(checkAnswers.text);
+    const checkAnswersToken = extractCsrfToken(checkAnswers.text);
+
+    await agent
+      .post("/pay-council-tax/check-answers")
+      .type("form")
+      .send({ _csrf: checkAnswersToken });
+    const confirmation = await agent.get("/pay-council-tax/confirmation");
+    await expectNoViolations(confirmation.text);
+  });
+
+  it("garden waste details page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const response = await request(app).get("/pay-garden-waste/details");
+    await expectNoViolations(response.text);
+  });
+
+  it("garden waste subscription page (empty) has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    await submitGardenWasteDetails(agent);
+
+    const subscriptionPage = await agent.get("/pay-garden-waste/subscription");
+    await expectNoViolations(subscriptionPage.text);
+  });
+
+  it("garden waste subscription page with a validation error has no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    await submitGardenWasteDetails(agent);
+
+    const subscriptionPage = await agent.get("/pay-garden-waste/subscription");
+    const token = extractCsrfToken(subscriptionPage.text);
+    const response = await agent
+      .post("/pay-garden-waste/subscription")
+      .type("form")
+      .send({ _csrf: token, bins: "" });
+    await expectNoViolations(response.text);
+  });
+
+  it("garden waste check answers and confirmation pages have no automatically detectable accessibility violations", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    await submitGardenWasteDetails(agent);
+
+    const subscriptionPage = await agent.get("/pay-garden-waste/subscription");
+    const subscriptionToken = extractCsrfToken(subscriptionPage.text);
+    await agent
+      .post("/pay-garden-waste/subscription")
+      .type("form")
+      .send({ _csrf: subscriptionToken, bins: "2" });
+
+    const checkAnswers = await agent.get("/pay-garden-waste/check-answers");
+    await expectNoViolations(checkAnswers.text);
+    const checkAnswersToken = extractCsrfToken(checkAnswers.text);
+
+    await agent
+      .post("/pay-garden-waste/check-answers")
+      .type("form")
+      .send({ _csrf: checkAnswersToken });
+    const confirmation = await agent.get("/pay-garden-waste/confirmation");
+    await expectNoViolations(confirmation.text);
+  });
+
+  it("council tax and garden waste applications both render their flow answer on the caseworker detail page and appear in the list", async () => {
+    const app = createApp();
+
+    const councilTaxAgent = request.agent(app);
+    await submitCouncilTaxDetails(councilTaxAgent);
+    const councilTaxAccountPage = await councilTaxAgent.get("/pay-council-tax/account");
+    const councilTaxAccountToken = extractCsrfToken(councilTaxAccountPage.text);
+    await councilTaxAgent
+      .post("/pay-council-tax/account")
+      .type("form")
+      .send({ _csrf: councilTaxAccountToken, accountNumber: "12345678" });
+    const councilTaxCheckAnswers = await councilTaxAgent.get("/pay-council-tax/check-answers");
+    const councilTaxCheckAnswersToken = extractCsrfToken(councilTaxCheckAnswers.text);
+    await councilTaxAgent
+      .post("/pay-council-tax/check-answers")
+      .type("form")
+      .send({ _csrf: councilTaxCheckAnswersToken });
+    const councilTaxConfirmation = await councilTaxAgent.get("/pay-council-tax/confirmation");
+    const [, councilTaxReference] = councilTaxConfirmation.text.match(
+      /([A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3})/,
+    );
+
+    const gardenWasteAgent = request.agent(app);
+    await submitGardenWasteDetails(gardenWasteAgent);
+    const subscriptionPage = await gardenWasteAgent.get("/pay-garden-waste/subscription");
+    const subscriptionToken = extractCsrfToken(subscriptionPage.text);
+    await gardenWasteAgent
+      .post("/pay-garden-waste/subscription")
+      .type("form")
+      .send({ _csrf: subscriptionToken, bins: "3" });
+    const gardenWasteCheckAnswers = await gardenWasteAgent.get("/pay-garden-waste/check-answers");
+    const gardenWasteCheckAnswersToken = extractCsrfToken(gardenWasteCheckAnswers.text);
+    await gardenWasteAgent
+      .post("/pay-garden-waste/check-answers")
+      .type("form")
+      .send({ _csrf: gardenWasteCheckAnswersToken });
+    const gardenWasteConfirmation = await gardenWasteAgent.get("/pay-garden-waste/confirmation");
+    const [, gardenWasteReference] = gardenWasteConfirmation.text.match(
+      /([A-Z0-9]{4}-[A-Z0-9]{3}-[A-Z0-9]{3})/,
+    );
+
+    const councilTaxDetail = await request(app).get(`/applications/${councilTaxReference}`);
+    expect(councilTaxDetail.text).toContain("Council tax payment");
+    expect(councilTaxDetail.text).toContain("Council tax - account 12345678, £150.00");
+    await expectNoViolations(councilTaxDetail.text);
+
+    const gardenWasteDetail = await request(app).get(`/applications/${gardenWasteReference}`);
+    expect(gardenWasteDetail.text).toContain("Garden waste payment");
+    expect(gardenWasteDetail.text).toContain("Garden waste - 3 bins, £135.00 per year");
+    await expectNoViolations(gardenWasteDetail.text);
+
+    const list = await request(app).get("/applications");
+    expect(list.text).toContain(councilTaxReference);
+    expect(list.text).toContain(gardenWasteReference);
+  });
 });

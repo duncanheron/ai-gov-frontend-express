@@ -13,6 +13,8 @@ function formatDate(date) {
 const flowAnswerLabels = {
   housing: "Housing situation",
   "housing-benefit-disability": "Disability details",
+  "council-tax": "Council tax payment",
+  "garden-waste": "Garden waste payment",
 };
 
 router.get("/", async (req, res) => {
