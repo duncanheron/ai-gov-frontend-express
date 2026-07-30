@@ -13,7 +13,9 @@ function useSharedServer() {
     server = createApp().listen(0);
   });
 
-  afterAll(() => new Promise((resolve) => server.close(resolve)));
+  // Guarded: if beforeAll threw, closing an undefined server would add a second
+  // failure on top of the real one.
+  afterAll(() => (server ? new Promise((resolve) => server.close(resolve)) : undefined));
 
   return () => server;
 }
