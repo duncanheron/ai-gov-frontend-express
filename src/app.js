@@ -36,12 +36,11 @@ function createApp() {
 
   const viewsPath = path.join(__dirname, "views");
   const govukFrontendPath = path.join(__dirname, "..", "node_modules", "govuk-frontend", "dist");
-  const nunjucksEnv = nunjucks.configure([viewsPath, govukFrontendPath], {
+  nunjucks.configure([viewsPath, govukFrontendPath], {
     autoescape: true,
     express: app,
     watch: !config.isProduction && !config.isTest,
   });
-  nunjucksEnv.addGlobal("serviceName", "Submit your application");
   app.set("view engine", "njk");
 
   app.use(pinoHttp({ logger, ...pinoHttpOptions }));
@@ -54,7 +53,9 @@ function createApp() {
 
   app.use((req, res, next) => {
     res.locals.csrfToken = generateCsrfToken(req);
-    res.locals.navigationItems = navigation.forCurrentPath(req.path);
+    const { serviceName, navigationItems } = navigation.resolveServiceContext(req.path);
+    res.locals.serviceName = serviceName;
+    res.locals.navigationItems = navigationItems;
     next();
   });
 

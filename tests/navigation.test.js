@@ -4,154 +4,136 @@ const { useSharedServer } = require("./helpers/testServer");
 const getServer = useSharedServer();
 
 describe("header navigation", () => {
-  it("homepage shows the service name linking to the homepage, and no external gov.uk logo link", async () => {
-    const response = await request(getServer()).get("/");
+  describe("pages with navigation", () => {
+    it("homepage shows the service name linking to the homepage, and no external gov.uk logo link", async () => {
+      const response = await request(getServer()).get("/");
 
-    expect(response.text).toContain('<a href="/" class="govuk-service-navigation__link">');
-    expect(response.text).not.toContain("//gov.uk");
+      expect(response.text).toContain('<a href="/" class="govuk-service-navigation__link">');
+      expect(response.text).not.toContain("//gov.uk");
+    });
+
+    it("homepage shows the default service name and exactly the two navigation items", async () => {
+      const response = await request(getServer()).get("/");
+
+      expect(response.text).toContain("Apply and pay for council services");
+      expect(response.text).toContain(
+        '<a class="govuk-service-navigation__link" href="/applications">',
+      );
+      expect(response.text).toContain(
+        '<a class="govuk-service-navigation__link" href="/choose-service">',
+      );
+      expect(response.text).toContain("Not sure which service you need?");
+    });
+
+    it("choose-service page shows the default service name and exactly the two navigation items", async () => {
+      const response = await request(getServer()).get("/choose-service");
+
+      expect(response.text).toContain("Apply and pay for council services");
+      expect(response.text).toContain(
+        '<a class="govuk-service-navigation__link" href="/applications">',
+      );
+      expect(response.text).toContain(
+        '<a class="govuk-service-navigation__link" href="/choose-service" aria-current="page">',
+      );
+    });
+
+    it("applications list page shows the Manage applications service name and the navigation, with Applications current", async () => {
+      const response = await request(getServer()).get("/applications");
+
+      expect(response.text).toContain("Manage applications");
+      expect(response.text).toContain(
+        '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
+      );
+      expect(response.text).toContain(
+        '<a class="govuk-service-navigation__link" href="/choose-service">',
+      );
+    });
+
+    it("an applications detail page shows the Manage applications service name and the navigation, with Applications current", async () => {
+      const response = await request(getServer()).get("/applications/DOES-NOT-EXIST");
+
+      expect(response.text).toContain("Manage applications");
+      expect(response.text).toContain(
+        '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
+      );
+    });
+
+    it("shows exactly two navigation items on the homepage - no more, no fewer", async () => {
+      const response = await request(getServer()).get("/");
+      const itemCount = response.text.split('class="govuk-service-navigation__item').length - 1;
+
+      expect(itemCount).toBe(2);
+    });
+
+    it("shows the mobile menu toggle on a page that has navigation", async () => {
+      const response = await request(getServer()).get("/");
+
+      expect(response.text).toContain("govuk-js-service-navigation-toggle");
+    });
+
+    it("does not mark the applications nav link as current on the homepage or choose-service page", async () => {
+      const home = await request(getServer()).get("/");
+      expect(home.text).not.toContain(
+        '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
+      );
+
+      const chooseService = await request(getServer()).get("/choose-service");
+      expect(chooseService.text).not.toContain(
+        '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
+      );
+    });
   });
 
-  it("homepage has a link to the applications list", async () => {
-    const response = await request(getServer()).get("/");
+  describe("journey pages have no navigation", () => {
+    it.each([
+      ["/apply/details", "Submit a general application"],
+      ["/apply-housing/details", "Apply for housing"],
+      ["/apply-housing-benefit/details", "Apply for Housing Benefit (disability)"],
+      ["/pay-council-tax/details", "Pay council tax"],
+      ["/pay-garden-waste/details", "Pay for garden waste"],
+    ])(
+      "%s shows its own service name and no service-navigation list",
+      async (path, serviceName) => {
+        const response = await request(getServer()).get(path);
 
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/applications">',
+        expect(response.text).toContain(serviceName);
+        expect(response.text).not.toContain("govuk-service-navigation__list");
+        expect(response.text).not.toContain("govuk-js-service-navigation-toggle");
+      },
     );
-    expect(response.text).toContain("Applications");
+
+    // The ordering bug: "/apply" is a text-prefix of "/apply-housing", so a
+    // naive match run in the wrong order would resolve this page to the
+    // general application journey instead - wrong, but plausible.
+    it("/apply-housing/details shows Apply for housing, never Submit a general application", async () => {
+      const response = await request(getServer()).get("/apply-housing/details");
+
+      expect(response.text).toContain("Apply for housing");
+      expect(response.text).not.toContain("Submit a general application");
+    });
   });
 
-  it("shows all five nav items on every page", async () => {
-    const response = await request(getServer()).get("/");
+  describe("homepage links to every journey and the picker", () => {
+    it("lists and links to all five journeys plus the picker", async () => {
+      const response = await request(getServer()).get("/");
 
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/applications">',
-    );
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/apply/details">',
-    );
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing/details">',
-    );
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing-benefit/details">',
-    );
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/choose-service">',
-    );
-    expect(response.text).toContain("Apply for housing");
-    expect(response.text).toContain("Apply for Housing Benefit (disability)");
-    expect(response.text).toContain("Not sure which service you need?");
-  });
+      expect(response.text).toContain('href="/apply/details"');
+      expect(response.text).toContain(">Submit a general application<");
 
-  it("does not mark the applications nav link as current on the homepage or apply journey", async () => {
-    const home = await request(getServer()).get("/");
-    expect(home.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
-    );
+      expect(response.text).toContain('href="/apply-housing/details"');
+      expect(response.text).toContain("Apply for housing");
 
-    const details = await request(getServer()).get("/apply/details");
-    expect(details.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
-    );
-  });
+      expect(response.text).toContain('href="/apply-housing-benefit/details"');
+      expect(response.text).toContain("Apply for Housing Benefit (disability)");
 
-  it("marks the applications nav link as current on the applications list page", async () => {
-    const response = await request(getServer()).get("/applications");
+      expect(response.text).toContain('href="/pay-council-tax/details"');
+      expect(response.text).toContain("Pay council tax");
 
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
-    );
-  });
+      expect(response.text).toContain('href="/pay-garden-waste/details"');
+      expect(response.text).toContain("Pay for garden waste");
 
-  it("marks the applications nav link as current on an applications detail page", async () => {
-    const response = await request(getServer()).get("/applications/DOES-NOT-EXIST");
-
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
-    );
-  });
-
-  it("marks the apply nav link as current on the apply journey, and no others", async () => {
-    const response = await request(getServer()).get("/apply/details");
-
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/apply/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing-benefit/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/choose-service" aria-current="page">',
-    );
-  });
-
-  it("marks the apply-housing nav link as current on the housing journey, and no others", async () => {
-    const response = await request(getServer()).get("/apply-housing/details");
-
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing-benefit/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/choose-service" aria-current="page">',
-    );
-  });
-
-  it("marks the apply-housing-benefit nav link as current on the housing benefit journey, and no others", async () => {
-    const response = await request(getServer()).get("/apply-housing-benefit/details");
-
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing-benefit/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/choose-service" aria-current="page">',
-    );
-  });
-
-  it("marks the choose-service nav link as current on the choose-service page, and no others", async () => {
-    const response = await request(getServer()).get("/choose-service");
-
-    expect(response.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/choose-service" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing/details" aria-current="page">',
-    );
-    expect(response.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/apply-housing-benefit/details" aria-current="page">',
-    );
-  });
-
-  it("homepage lists and links to all four application flows", async () => {
-    const response = await request(getServer()).get("/");
-
-    expect(response.text).toContain('href="/apply/details"');
-    expect(response.text).toContain(">Apply<");
-
-    expect(response.text).toContain('href="/apply-housing/details"');
-    expect(response.text).toContain("Apply for housing");
-
-    expect(response.text).toContain('href="/apply-housing-benefit/details"');
-    expect(response.text).toContain("Apply for Housing Benefit (disability)");
-
-    expect(response.text).toContain('href="/choose-service"');
-    expect(response.text).toContain("Not sure which service you need?");
+      expect(response.text).toContain('href="/choose-service"');
+      expect(response.text).toContain("Not sure which service you need?");
+    });
   });
 });

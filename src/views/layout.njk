@@ -28,7 +28,7 @@
       {{ govukServiceNavigation({
         serviceName: serviceName,
         serviceUrl: "/",
-        navigation: navigationItems
+        navigation: navigationItems if navigationItems.length else undefined
       }) }}
     </header>
 
