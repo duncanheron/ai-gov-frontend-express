@@ -8,6 +8,7 @@ const sessionOptions = {
   name: "sessionId",
   resave: false,
   saveUninitialized: false,
+  store: new pgSession({ pool, tableName: "session" }),
   cookie: {
     httpOnly: true,
     sameSite: "lax",
@@ -15,12 +16,5 @@ const sessionOptions = {
     maxAge: 30 * 60 * 1000,
   },
 };
-
-// pg-mem (used in tests, see src/db/pool.js) doesn't support the SQL
-// connect-pg-simple runs internally, so tests keep express-session's
-// default in-memory store instead.
-if (!config.isTest) {
-  sessionOptions.store = new pgSession({ pool, tableName: "session" });
-}
 
 module.exports = session(sessionOptions);
