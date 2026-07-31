@@ -1,10 +1,17 @@
 {% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/date-input/macro.njk" import govukDateInput %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block pageTitle %}{% if errors.length %}Error: {% endif %}Your details{% endblock %}
+
+{% block beforeContent %}
+<nav aria-label="Back">
+{{ govukBackLink({ text: "Choose a different service", href: "/" }) }}
+</nav>
+{% endblock %}
 
 {% block content %}
 <div class="govuk-grid-row">

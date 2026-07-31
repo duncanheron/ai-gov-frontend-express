@@ -6,8 +6,13 @@
 
 {% block pageTitle %}{% if errors.length %}Error: {% endif %}Tell us about your disability and how it affects your housing needs{% endblock %}
 
-{% block content %}
+{% block beforeContent %}
+<nav aria-label="Back">
 {{ govukBackLink({ text: "Back", href: "/apply-housing-benefit/details" }) }}
+</nav>
+{% endblock %}
+
+{% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     {% if errors.length %}

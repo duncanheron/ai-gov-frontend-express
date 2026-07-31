@@ -6,8 +6,13 @@
 
 {% block pageTitle %}{% if errors.length %}Error: {% endif %}How many garden waste bins do you need?{% endblock %}
 
-{% block content %}
+{% block beforeContent %}
+<nav aria-label="Back">
 {{ govukBackLink({ text: "Back", href: "/pay-garden-waste/details" }) }}
+</nav>
+{% endblock %}
+
+{% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
