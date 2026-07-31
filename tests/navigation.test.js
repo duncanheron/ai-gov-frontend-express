@@ -1,7 +1,17 @@
 const request = require("supertest");
 const { useSharedServer } = require("./helpers/testServer");
+const { extractCsrfToken } = require("./helpers/extractCsrfToken");
+const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 
 const getServer = useSharedServer();
+
+beforeAll(() => prepareTestDatabase());
+
+// Scoped to the <title> tag so it can't be satisfied by the service-name bar,
+// which renders the same text elsewhere on every page.
+function getTitle(html) {
+  return html.match(/<title>(.*?)<\/title>/s)[1];
+}
 
 describe("header navigation", () => {
   describe("pages with navigation", () => {
@@ -96,7 +106,7 @@ describe("header navigation", () => {
       async (path, serviceName) => {
         const response = await request(getServer()).get(path);
 
-        expect(response.text).toContain(serviceName);
+        expect(getTitle(response.text)).toContain(serviceName);
         expect(response.text).not.toContain("govuk-service-navigation__list");
         expect(response.text).not.toContain("govuk-js-service-navigation-toggle");
       },
@@ -110,6 +120,56 @@ describe("header navigation", () => {
 
       expect(response.text).toContain("Apply for housing");
       expect(response.text).not.toContain("Submit a general application");
+    });
+  });
+
+  describe("page titles follow the GOV.UK 'Page name - Service name - GOV.UK' convention", () => {
+    it.each([
+      ["/apply/details", "Submit a general application"],
+      ["/apply-housing/details", "Apply for housing"],
+      ["/apply-housing-benefit/details", "Apply for Housing Benefit (disability)"],
+      ["/pay-council-tax/details", "Pay council tax"],
+      ["/pay-garden-waste/details", "Pay for garden waste"],
+    ])(
+      "%s's title ends with its own service name, not just the page name",
+      async (path, serviceName) => {
+        const response = await request(getServer()).get(path);
+
+        expect(getTitle(response.text)).toBe(`Your details - ${serviceName} - GOV.UK`);
+      },
+    );
+
+    it("homepage title is page-specific and does not contain the service name twice", async () => {
+      const response = await request(getServer()).get("/");
+      const title = getTitle(response.text);
+
+      expect(title).toContain("Apply and pay for council services");
+      expect(title.split("Apply and pay for council services").length - 1).toBe(1);
+    });
+
+    it("/applications title includes Manage applications", async () => {
+      const response = await request(getServer()).get("/applications");
+
+      expect(getTitle(response.text)).toContain("Manage applications");
+    });
+
+    it("an error state keeps the Error: prefix and still includes the service name", async () => {
+      const agent = request.agent(getServer());
+
+      const detailsPage = await agent.get("/apply-housing/details");
+      const token = extractCsrfToken(detailsPage.text);
+
+      const response = await agent.post("/apply-housing/details").type("form").send({
+        _csrf: token,
+        fullName: "",
+        email: "not-an-email",
+        "dateOfBirth-day": "31",
+        "dateOfBirth-month": "2",
+        "dateOfBirth-year": "2020",
+      });
+
+      expect(response.status).toBe(400);
+      expect(getTitle(response.text)).toBe("Error: Your details - Apply for housing - GOV.UK");
     });
   });
 
