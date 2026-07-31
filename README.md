@@ -9,6 +9,8 @@ Journey: homepage (start page) -> your details -> check your answers -> confirma
 - Node.js 24.x (see `.nvmrc`)
 - PostgreSQL (for submitted registrations - see `.env.example` for the `DATABASE_URL` shape)
 - Docker + Docker Compose (optional, for containerised runs - brings up Postgres for you)
+- Docker running (required to run tests - `npm test` starts a real Postgres in a Testcontainers
+  container, no manual database setup needed)
 
 ## Local setup
 
@@ -80,10 +82,10 @@ Three things worth knowing about that:
 
 - Views are rendered with Nunjucks, using GOV.UK Frontend's component macros
   (`node_modules/govuk-frontend/dist`).
-- Registration answers are held in the session (`express-session`, in-memory store) for the
-  duration of the journey and cleared once a reference number is issued. Sessions are never
-  persisted to Postgres - only a submitted registration is, at the moment the user submits
-  (see `src/db/registrations.js`).
+- Registration answers are held in the session (`express-session`, backed by Postgres via
+  `connect-pg-simple`) for the duration of the journey and cleared once a reference number is
+  issued. A submitted application is written separately, at the moment the user submits
+  (see `src/db/applications.js`).
 - Postgres access goes through a single hand-written-SQL data layer (`src/db/pool.js` and
   friends) - no ORM. Schema changes are tracked with `node-pg-migrate` (`migrations/`).
 - CSRF protection (`csrf-sync`) and a nonce-based Content-Security-Policy (`helmet`) are applied
