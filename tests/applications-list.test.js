@@ -2,6 +2,7 @@ const request = require("supertest");
 const applications = require("../src/db/applications");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
+const { parseTable } = require("./helpers/table");
 
 const getServer = useSharedServer();
 
@@ -39,14 +40,20 @@ describe("applications list page", () => {
     const response = await request(getServer()).get("/applications");
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain("Grace Hopper");
-    expect(response.text).toContain("Alan Turing");
-    expect(response.text).toContain('href="/applications/TEST-LATER"');
-    expect(response.text).toContain('href="/applications/TEST-EARLIER"');
 
-    const laterIndex = response.text.indexOf("TEST-LATER");
-    const earlierIndex = response.text.indexOf("TEST-EARLIER");
-    expect(laterIndex).toBeGreaterThan(-1);
-    expect(laterIndex).toBeLessThan(earlierIndex);
+    const table = parseTable(response.text);
+    expect(table.head).toEqual(["Full name", "Reference", "Submitted"]);
+    expect(table.rows).toEqual([
+      [
+        { text: "Alan Turing", href: null },
+        { text: "TEST-LATER", href: "/applications/TEST-LATER" },
+        { text: "02/01/2026", href: null },
+      ],
+      [
+        { text: "Grace Hopper", href: null },
+        { text: "TEST-EARLIER", href: "/applications/TEST-EARLIER" },
+        { text: "01/01/2026", href: null },
+      ],
+    ]);
   });
 });
