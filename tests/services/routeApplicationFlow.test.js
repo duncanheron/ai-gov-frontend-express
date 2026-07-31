@@ -167,6 +167,14 @@ describe("routeApplicationFlow", () => {
         expect(definition.summary.length).toBeGreaterThan(0);
       });
     });
+
+    it("defines a non-empty, root-relative start href for every flow", () => {
+      Object.values(FLOW_DEFINITIONS).forEach((definition) => {
+        expect(typeof definition.href).toBe("string");
+        expect(definition.href.length).toBeGreaterThan(0);
+        expect(definition.href.startsWith("/")).toBe(true);
+      });
+    });
   });
 
   describe("ROUTING_SCHEMA", () => {

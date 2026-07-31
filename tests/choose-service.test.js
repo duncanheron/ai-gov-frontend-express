@@ -1,6 +1,11 @@
 const request = require("supertest");
+const { JSDOM } = require("jsdom");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
-const { queueTestResponses, resetTestResponses } = require("../src/services/routeApplicationFlow");
+const {
+  queueTestResponses,
+  resetTestResponses,
+  FLOW_DEFINITIONS,
+} = require("../src/services/routeApplicationFlow");
 const { useSharedServer } = require("./helpers/testServer");
 
 const getServer = useSharedServer();
@@ -466,5 +471,81 @@ describe("choose service (AI picker)", () => {
     expect(result.text).toContain('href="/choose-service/start-again"');
     expect(result.text).toContain('href="/"');
     expect(result.text).not.toContain("We recommend");
+  });
+
+  // Parameterised straight from FLOW_DEFINITIONS itself, rather than a fixed
+  // list of flow ids, so a fifth flow added without an href fails here with no
+  // test edit needed.
+  describe.each(Object.keys(FLOW_DEFINITIONS))('the decided "%s" flow\'s result screen', (flow) => {
+    it("renders a real, followable continue link rather than an inert control", async () => {
+      const agent = request.agent(getServer());
+
+      queueTestResponses({
+        decided: true,
+        flow,
+        clarifyingQuestion: null,
+        noServiceMessage: null,
+      });
+
+      const askPage = await agent.get("/choose-service");
+      const token = extractCsrfToken(askPage.text);
+
+      const submit = await agent
+        .post("/choose-service")
+        .type("form")
+        .send({ _csrf: token, description: "anything" });
+      expect(submit.status).toBe(302);
+
+      const result = await agent.get("/choose-service");
+      expect(result.status).toBe(200);
+
+      const dom = new JSDOM(result.text);
+      const continueLink = dom.window.document.querySelector("a.govuk-button");
+      const continueButton = dom.window.document.querySelector("button.govuk-button");
+
+      expect(continueLink).not.toBeNull();
+      expect(continueLink.tagName).toBe("A");
+      const href = continueLink.getAttribute("href");
+      expect(typeof href).toBe("string");
+      expect(href.length).toBeGreaterThan(0);
+      expect(href.startsWith("/")).toBe(true);
+      expect(continueLink.textContent.trim()).toBe(`Continue to ${FLOW_DEFINITIONS[flow].label}`);
+      expect(continueButton).toBeNull();
+
+      // The "can actually proceed" assertion: the start URL must be the
+      // journey's own first step, not merely a URL that isn't a 404 - a
+      // journey guard would redirect (302) if session state were required
+      // and missing.
+      const destination = await agent.get(href);
+      expect(destination.status).toBe(200);
+    });
+  });
+
+  it("fails loudly rather than rendering an inert control, when a decided flow has no start href", async () => {
+    const agent = request.agent(getServer());
+
+    queueTestResponses({
+      decided: true,
+      flow: "council-tax",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
+    const askPage = await agent.get("/choose-service");
+    const token = extractCsrfToken(askPage.text);
+
+    await agent
+      .post("/choose-service")
+      .type("form")
+      .send({ _csrf: token, description: "I need to pay my council tax bill" });
+
+    const originalHref = FLOW_DEFINITIONS["council-tax"].href;
+    delete FLOW_DEFINITIONS["council-tax"].href;
+    try {
+      const result = await agent.get("/choose-service");
+      expect(result.status).toBe(500);
+    } finally {
+      FLOW_DEFINITIONS["council-tax"].href = originalHref;
+    }
   });
 });
