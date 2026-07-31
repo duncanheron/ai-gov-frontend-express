@@ -1,5 +1,26 @@
 # Conventions
 
+## What this is
+
+A prototype for exploring AI-assisted service routing on GOV.UK patterns — not a
+live service. Nothing here handles real applicants, real money, or real data.
+
+Deliberate deviations, so they don't get "fixed":
+
+- `/applications` has no authentication. It exposes every submission, and that is
+  accepted for now — do not add auth without asking.
+- No payment is ever taken. The council tax and garden waste journeys exist to
+  give the AI service picker more than two options to choose between, so amounts
+  are fixed placeholders.
+- The GOV.UK crown links to this service's homepage, not `https://www.gov.uk`, so
+  a demo never drops the user out.
+- Preview and Production deployments share one Neon database; Neon preview
+  branching is not enabled. Migrations run only on production builds.
+
+Being a prototype lowers the bar on scope, not on craft. Tests must fail when
+behaviour breaks, pages must pass axe, and GOV.UK patterns are followed as
+written — the point of a prototype is to learn whether the real thing would work.
+
 ## Comments
 
 Prefer readable code over commentary. A comment earns its place only when it says
