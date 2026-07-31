@@ -365,7 +365,6 @@ function buildAllPages(getServer) {
 module.exports = {
   buildAllPages,
   extractReference,
-  reachApplyConfirmation,
   reachCouncilTaxConfirmation,
   reachGardenWasteConfirmation,
 };
