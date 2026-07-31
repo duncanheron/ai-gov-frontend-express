@@ -12,6 +12,7 @@ const FLOW_DEFINITIONS = {
       "For general housing applications - for example applying for social housing, or needing " +
       "help because you're homeless or at risk of homelessness. This is the right service when " +
       "a disability isn't affecting your housing needs.",
+    href: "/apply-housing/details",
   },
   "housing-benefit-disability": {
     label: "Housing Benefit (disability)",
@@ -19,18 +20,21 @@ const FLOW_DEFINITIONS = {
       "For people applying for housing benefit specifically because of a disability - for " +
       "example if you or someone in your household has a registered disability that affects " +
       "your housing needs.",
+    href: "/apply-housing-benefit/details",
   },
   "council-tax": {
     label: "Council Tax",
     summary:
       "For paying council tax - the compulsory annual property tax every household owes the " +
       "council, regardless of which services they use.",
+    href: "/pay-council-tax/details",
   },
   "garden-waste": {
     label: "Garden Waste",
     summary:
       "For paying the garden waste subscription - an optional paid service for collecting " +
       "garden and green waste from an extra bin, renewed each year.",
+    href: "/pay-garden-waste/details",
   },
 };
 

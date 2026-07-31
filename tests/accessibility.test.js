@@ -4,6 +4,7 @@ const { JSDOM } = require("jsdom");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
 const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
+const { queueTestResponses, resetTestResponses } = require("../src/services/routeApplicationFlow");
 
 const getServer = useSharedServer();
 
@@ -26,6 +27,10 @@ async function expectNoViolations(html) {
 describe("accessibility", () => {
   beforeAll(async () => {
     await prepareTestDatabase();
+  });
+
+  afterEach(() => {
+    resetTestResponses();
   });
 
   it("homepage has no automatically detectable accessibility violations", async () => {
@@ -402,28 +407,48 @@ describe("accessibility", () => {
   it("choose service clarifying question page has no automatically detectable accessibility violations", async () => {
     const agent = request.agent(getServer());
 
+    queueTestResponses({
+      decided: false,
+      flow: null,
+      clarifyingQuestion: "Does anyone in your household have a registered disability?",
+      noServiceMessage: null,
+    });
+
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
-    await agent
+    const submit = await agent
       .post("/choose-service")
       .type("form")
       .send({ _csrf: token, description: "I need some help" });
+    expect(submit.status).toBe(302);
 
     const clarifyPage = await agent.get("/choose-service");
+    expect(clarifyPage.text).toContain(
+      "Does anyone in your household have a registered disability?",
+    );
     await expectNoViolations(clarifyPage.text);
   });
 
   it("choose service result page has no automatically detectable accessibility violations", async () => {
     const agent = request.agent(getServer());
 
+    queueTestResponses({
+      decided: true,
+      flow: "housing",
+      clarifyingQuestion: null,
+      noServiceMessage: null,
+    });
+
     const askPage = await agent.get("/choose-service");
     const token = extractCsrfToken(askPage.text);
-    await agent
+    const submit = await agent
       .post("/choose-service")
       .type("form")
       .send({ _csrf: token, description: "I want to apply for housing" });
+    expect(submit.status).toBe(302);
 
     const resultPage = await agent.get("/choose-service");
+    expect(resultPage.text).toContain("We recommend");
     await expectNoViolations(resultPage.text);
   });
 

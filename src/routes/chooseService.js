@@ -4,18 +4,17 @@ const { routeApplicationFlow, FLOW_DEFINITIONS } = require("../services/routeApp
 
 const router = express.Router();
 
-const FLOW_HREFS = {
-  housing: "/apply-housing/details",
-  "housing-benefit-disability": "/apply-housing-benefit/details",
-};
-
 function chooseServiceViewModel(state) {
   if (!state) {
     return { view: "ask" };
   }
 
   if (state.decided && state.flow) {
-    return { view: "result", ...FLOW_DEFINITIONS[state.flow], href: FLOW_HREFS[state.flow] };
+    const definition = FLOW_DEFINITIONS[state.flow];
+    if (!definition || !definition.href) {
+      throw new Error(`No start href configured for decided flow "${state.flow}"`);
+    }
+    return { view: "result", ...definition };
   }
 
   if (state.decided) {
