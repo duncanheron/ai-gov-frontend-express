@@ -58,6 +58,12 @@ Jest + Supertest, pg-mem in test env. A test must fail if the behaviour it cover
 breaks — check by reverting the code and watching it go red. A test that passes
 either way is worse than none, because it reads as coverage.
 
+Assert on the element, not the page. `expect(response.text).toContain('href="/x")`
+passes if _any_ element on the page has that href — the layout alone carries 14
+of them. Select the element (JSDOM is available), then assert on its attributes
+and text. Whole-page matching is how five tests in this repo came to pass while
+the behaviour they named was broken.
+
 ## Process
 
 - Work is tracked in Linear (team Cobalt, `CBLT`). Docs and specs live there, not
