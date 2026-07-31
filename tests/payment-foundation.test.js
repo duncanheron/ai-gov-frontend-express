@@ -243,22 +243,14 @@ describe("navigation and homepage", () => {
     );
   });
 
-  it("adds nav items for both payment flows, each marked current only on its own page", async () => {
+  it("shows each payment flow's own service name and no navigation links, rather than a nav item", async () => {
     const councilTaxPage = await request(getServer()).get("/pay-council-tax/details");
-    expect(councilTaxPage.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/pay-council-tax/details" aria-current="page">',
-    );
-    expect(councilTaxPage.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/pay-garden-waste/details" aria-current="page">',
-    );
+    expect(councilTaxPage.text).toContain("Pay council tax");
+    expect(councilTaxPage.text).not.toContain("govuk-service-navigation__list");
 
     const gardenWastePage = await request(getServer()).get("/pay-garden-waste/details");
-    expect(gardenWastePage.text).toContain(
-      '<a class="govuk-service-navigation__link" href="/pay-garden-waste/details" aria-current="page">',
-    );
-    expect(gardenWastePage.text).not.toContain(
-      '<a class="govuk-service-navigation__link" href="/pay-council-tax/details" aria-current="page">',
-    );
+    expect(gardenWastePage.text).toContain("Pay for garden waste");
+    expect(gardenWastePage.text).not.toContain("govuk-service-navigation__list");
 
     const home = await request(getServer()).get("/");
     expect(home.text).not.toContain(
