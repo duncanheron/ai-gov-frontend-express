@@ -5,8 +5,13 @@
 
 {% block pageTitle %}Which of these do you like?{% endblock %}
 
-{% block content %}
+{% block beforeContent %}
+<nav aria-label="Back">
 {{ govukBackLink({ text: "Back", href: "/apply/details" }) }}
+</nav>
+{% endblock %}
+
+{% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <form method="post" action="/apply/preferences" novalidate>

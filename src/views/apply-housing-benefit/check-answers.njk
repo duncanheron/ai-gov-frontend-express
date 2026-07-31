@@ -3,8 +3,12 @@
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% block pageTitle %}Check your answers{% endblock %}
-{% block content %}
+{% block beforeContent %}
+<nav aria-label="Back">
 {{ govukBackLink({ text: "Back", href: "/apply-housing-benefit/disability-details" }) }}
+</nav>
+{% endblock %}
+{% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-xl">Check your answers</h1>
