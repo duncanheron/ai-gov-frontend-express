@@ -101,7 +101,31 @@ describe("application detail page", () => {
   });
 
   it("shows no favourite animal row when favourite_animal is NULL, regardless of flow", async () => {
-    for (const reference of ["TEST-DETAIL", "TEST-DETAIL-HOUSING", "TEST-DETAIL-DISABILITY"]) {
+    const applicationsWithoutFavouriteAnimal = [
+      { reference: "TEST-DETAIL-NO-ANIMAL-STANDARD" },
+      {
+        reference: "TEST-DETAIL-NO-ANIMAL-HOUSING",
+        flow: "housing",
+        flowAnswer: "Renting privately",
+      },
+      {
+        reference: "TEST-DETAIL-NO-ANIMAL-DISABILITY",
+        flow: "housing-benefit-disability",
+        flowAnswer: "Some disability details text",
+      },
+    ];
+
+    for (const { reference, flow, flowAnswer } of applicationsWithoutFavouriteAnimal) {
+      await applications.create({
+        fullName: "No Animal",
+        email: "no-animal@example.com",
+        dateOfBirth: "1990-01-01",
+        reference,
+        submittedAt: new Date("2026-01-08T09:00:00.000Z"),
+        flow,
+        flowAnswer,
+      });
+
       const response = await request(getServer()).get(`/applications/${reference}`);
 
       expect(response.status).toBe(200);

@@ -6,7 +6,9 @@ const { useSharedServer } = require("./helpers/testServer");
 const getServer = useSharedServer();
 
 describe("applications list page", () => {
-  beforeAll(async () => {
+  // beforeEach, not beforeAll: one test asserts the empty state and the other seeds rows -
+  // under --randomize either can run first, so each needs its own clean table.
+  beforeEach(async () => {
     await prepareTestDatabase();
   });
 
