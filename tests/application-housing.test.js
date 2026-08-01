@@ -1,16 +1,11 @@
 const request = require("supertest");
 const applications = require("../src/db/applications");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
 
 const getServer = useSharedServer();
 
 describe("housing application journey - happy path", () => {
-  beforeAll(async () => {
-    await prepareTestDatabase();
-  });
-
   it("completes start -> details -> situation -> check answers -> confirmation", async () => {
     const agent = request.agent(getServer());
 

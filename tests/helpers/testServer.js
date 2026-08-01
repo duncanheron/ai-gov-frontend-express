@@ -1,5 +1,5 @@
 const createApp = require("../../src/app");
-const { prepareTestDatabase } = require("./prepareTestDatabase");
+const pool = require("../../src/db/pool");
 
 // Supertest binds and closes a fresh ephemeral server for every `request(app)`
 // call. Across the whole suite that was ~145 bind/close cycles, and under
@@ -10,19 +10,22 @@ const { prepareTestDatabase } = require("./prepareTestDatabase");
 function useSharedServer() {
   let server;
 
-  // Every route goes through the session middleware, which now always writes to Postgres
-  // (see src/middleware/session.js) - a file doesn't have to touch the applications table to
-  // still need its worker's database ready. Calling this here, rather than trusting each file to
-  // do it, means a file testing something unrelated to data storage can't fail on a missing
-  // schema. It's a no-op if the file's own beforeAll already called it.
-  beforeAll(async () => {
-    await prepareTestDatabase();
+  // Claim pool teardown so tests/setup/closePoolAfterTests.js defers to the afterAll below -
+  // whatever owns the server must close it before the pool it depends on, and only this
+  // module knows when that is.
+  global.__POOL_CLOSED_BY_TEST_SERVER__ = true;
+
+  beforeAll(() => {
     server = createApp().listen(0);
   });
 
   // Guarded: if beforeAll threw, closing an undefined server would add a second
-  // failure on top of the real one.
-  afterAll(() => (server ? new Promise((resolve) => server.close(resolve)) : undefined));
+  // failure on top of the real one. Closes the pool only after the server, so no in-flight
+  // request or session-store write can land on an already-ended pool.
+  afterAll(async () => {
+    if (server) await new Promise((resolve) => server.close(resolve));
+    await pool.end();
+  });
 
   return () => server;
 }

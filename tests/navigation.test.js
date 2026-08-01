@@ -1,11 +1,8 @@
 const request = require("supertest");
 const { useSharedServer } = require("./helpers/testServer");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 
 const getServer = useSharedServer();
-
-beforeAll(() => prepareTestDatabase());
 
 // Scoped to the <title> tag so it can't be satisfied by the service-name bar,
 // which renders the same text elsewhere on every page.

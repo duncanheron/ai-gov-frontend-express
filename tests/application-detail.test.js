@@ -1,14 +1,11 @@
 const request = require("supertest");
 const applications = require("../src/db/applications");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
 
 const getServer = useSharedServer();
 
 describe("application detail page", () => {
   beforeAll(async () => {
-    await prepareTestDatabase();
-
     await applications.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
