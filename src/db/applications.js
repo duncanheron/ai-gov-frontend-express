@@ -52,10 +52,7 @@ async function get(reference) {
 
 const LIKE_WILDCARDS = { "\\": "\\\\", "%": "\\%", "_": "\\_" };
 
-// Postgres's LIKE/ILIKE default escape character is backslash, so this needs
-// no explicit ESCAPE clause — which is deliberate: pg-mem (used in tests)
-// cannot parse an ESCAPE clause at all, and its LIKE/ILIKE matcher doesn't
-// implement backslash-escaping either way. See tests/db/applications-list.test.js.
+// Escapes \, % and _ so a name matches literally rather than as a LIKE/ILIKE wildcard.
 function escapeLikeWildcards(value) {
   return value.replace(/[\\%_]/g, (character) => LIKE_WILDCARDS[character]);
 }
@@ -70,10 +67,10 @@ async function list({ name } = {}) {
 
   const pattern = `%${escapeLikeWildcards(trimmedName)}%`;
   const result = await pool.query(
-    "SELECT * FROM applications WHERE full_name ILIKE $1 ORDER BY submitted_at DESC",
+    "SELECT * FROM applications WHERE full_name ILIKE $1 ESCAPE '\\' ORDER BY submitted_at DESC",
     [pattern],
   );
   return result.rows;
 }
 
-module.exports = { create, get, list, escapeLikeWildcards };
+module.exports = { create, get, list };
