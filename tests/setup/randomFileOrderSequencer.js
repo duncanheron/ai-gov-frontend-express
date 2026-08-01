@@ -1,8 +1,8 @@
 const Sequencer = require("@jest/test-sequencer").default;
 
 // `jest --randomize` only shuffles tests within a file, so it can't prove cross-file isolation -
-// file order comes from the test sequencer instead. This one shuffles it on every run, which is
-// how CBLT-131 proved that no file depends on another's leftover state or on run order.
+// file order comes from the test sequencer instead. This one shuffles it on every run, so a file
+// that depends on another's leftover state or on run order fails intermittently rather than never.
 class RandomFileOrderSequencer extends Sequencer {
   sort(tests) {
     const shuffled = [...tests];

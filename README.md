@@ -8,9 +8,9 @@ Journey: homepage (start page) -> your details -> check your answers -> confirma
 
 - Node.js 24.x (see `.nvmrc`)
 - PostgreSQL (for submitted registrations - see `.env.example` for the `DATABASE_URL` shape)
-- Docker + Docker Compose (optional, for containerised runs - brings up Postgres for you)
-- Docker running (required to run tests - `npm test` starts a real Postgres in a Testcontainers
-  container, no manual database setup needed)
+- Docker running - required to run tests (`npm test` starts a real Postgres in a Testcontainers
+  container, no manual database setup needed) and optional otherwise, for containerised runs via
+  Docker Compose (brings up Postgres for you)
 
 ## Local setup
 
