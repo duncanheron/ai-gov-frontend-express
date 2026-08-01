@@ -1,11 +1,6 @@
 const pool = require("../../src/db/pool");
-const { prepareTestDatabase } = require("../helpers/prepareTestDatabase");
 
 describe("db pool", () => {
-  beforeAll(async () => {
-    await prepareTestDatabase();
-  });
-
   it("round-trips a row through the applications table", async () => {
     await pool.query(
       `INSERT INTO applications (id, full_name, email, date_of_birth, reference, submitted_at)
@@ -20,9 +15,11 @@ describe("db pool", () => {
     expect(result.rows[0].email).toBe("john@example.com");
   });
 
-  // Pins real Postgres ILIKE/ESCAPE behaviour: a search term is matched literally, not as a
-  // wildcard pattern, once its own %, _ and \ characters are escaped (see CBLT-131).
-  it("matches ILIKE + ESCAPE patterns literally, not as wildcards", async () => {
+  // This proves the *test database* has real Postgres ILIKE/ESCAPE semantics, not pg-mem's
+  // inverted ones - the empirical case for this ticket. It defines its own escaping and query
+  // rather than calling src/db/applications.js, so it cannot catch a regression there; CBLT-129
+  // owns adding that behavioural coverage against the real helper.
+  it("this test database's ILIKE + ESCAPE matches a search term literally, not as a wildcard", async () => {
     await pool.query(
       `INSERT INTO applications (id, full_name, email, date_of_birth, reference, submitted_at)
        VALUES ($1, $2, $3, $4, $5, $6), ($7, $8, $9, $10, $11, $12), ($13, $14, $15, $16, $17, $18)`,
