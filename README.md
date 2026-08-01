@@ -30,7 +30,8 @@ The app is served at http://localhost:3000.
 - `npm start` - build assets, then start the app for production
 - `npm test` - build assets, then run the Jest test suite (integration + accessibility). File
   order is randomised each run and the seed is printed at the start; replay a run that failed
-  with `JEST_SEQUENCER_SEED=<seed> npm test`
+  with `JEST_SEQUENCER_SEED=<seed> npm test` - this reproduces the file order, not timing, so it
+  won't reliably reproduce a race
 - `npm run lint` / `npm run lint:fix` - ESLint
 - `npm run format` / `npm run format:check` - Prettier
 - `npm run build:assets` - compile GOV.UK Frontend Sass/JS/static assets into `public/`
