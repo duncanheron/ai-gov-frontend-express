@@ -19,10 +19,4 @@ async function truncateAllTables() {
   await pool.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
 }
 
-// Kept as a named export - not just a synonym for truncateAllTables - because
-// tests/db/applications-list.test.js (CBLT-129's, left as-is) calls it under this name.
-async function prepareTestDatabase() {
-  await truncateAllTables();
-}
-
-module.exports = { truncateAllTables, prepareTestDatabase };
+module.exports = { truncateAllTables };

@@ -50,8 +50,26 @@ async function get(reference) {
   return result.rows[0] || null;
 }
 
-async function list() {
-  const result = await pool.query("SELECT * FROM applications ORDER BY submitted_at DESC");
+const LIKE_WILDCARDS = { "\\": "\\\\", "%": "\\%", _: "\\_" };
+
+// Escapes \, % and _ so a name matches literally rather than as a LIKE/ILIKE wildcard.
+function escapeLikeWildcards(value) {
+  return value.replace(/[\\%_]/g, (character) => LIKE_WILDCARDS[character]);
+}
+
+async function list({ name } = {}) {
+  const trimmedName = typeof name === "string" ? name.trim() : "";
+
+  if (!trimmedName) {
+    const result = await pool.query("SELECT * FROM applications ORDER BY submitted_at DESC");
+    return result.rows;
+  }
+
+  const pattern = `%${escapeLikeWildcards(trimmedName)}%`;
+  const result = await pool.query(
+    "SELECT * FROM applications WHERE full_name ILIKE $1 ESCAPE '\\' ORDER BY submitted_at DESC",
+    [pattern],
+  );
   return result.rows;
 }
 
