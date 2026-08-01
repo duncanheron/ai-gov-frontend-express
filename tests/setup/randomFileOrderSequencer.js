@@ -14,9 +14,27 @@ function mulberry32(seed) {
   };
 }
 
+function randomSeed() {
+  return Math.floor(Math.random() * 2 ** 31);
+}
+
 function resolveSeed() {
-  const fromEnv = Number(process.env.JEST_SEQUENCER_SEED);
-  return Number.isInteger(fromEnv) ? fromEnv : Math.floor(Math.random() * 2 ** 31);
+  const raw = process.env.JEST_SEQUENCER_SEED;
+  if (raw === undefined) return randomSeed();
+
+  const parsed = Number(raw);
+  // Number("") is 0, which is a valid integer, so an empty value would otherwise be silently
+  // used as seed 0 instead of falling back - check for it explicitly rather than trusting
+  // Number.isInteger alone.
+  if (raw.trim() === "" || !Number.isInteger(parsed)) {
+    console.error(
+      `JEST_SEQUENCER_SEED=${JSON.stringify(raw)} is not a valid integer - using a random seed ` +
+        "instead. A replay attempt with this value would not reproduce the run it names.",
+    );
+    return randomSeed();
+  }
+
+  return parsed;
 }
 
 // `jest --randomize` only shuffles tests within a file, so it can't prove cross-file isolation -
