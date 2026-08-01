@@ -58,6 +58,19 @@ Every ticket must include, in the Linear description:
 
 A one-line title with no description is never acceptable, even for small changes. One ticket should still be one reviewable PR's worth of work.
 
+## Keep it short enough to be read
+
+A human has to read the ticket before approving it into `Todo`, and a ticket nobody finishes reading is not a spec. Aim for something readable in about two minutes. A search box should not run to two thousand words.
+
+Length comes from four habits, all of them worth cutting:
+
+- **Restating CLAUDE.md.** The engineer reads it every session. Repeating "render with `text:`", "build the view model in the route", "prove the test fails by reverting" adds bulk and implies the conventions you _didn't_ repeat are optional.
+- **Arguing with mistakes nobody has made yet.** "X is not a divergence", "don't read this as a shape later tickets extend", "don't delete those tests believing they are duplicates". Every one of these is a rebuttal to an imagined reader, and together they are usually most of the length. Say what to do; drop the defence.
+- **Justifying each acceptance criterion.** One line each. If a criterion needs a paragraph to defend its existence, it is either two criteria or none. Ten is a lot; sixteen means the slice is wrong or the list is padded.
+- **Writing the implementation as prose.** A technical note earns its place by being a _finding_ -- something you had to dig for, that the engineer would otherwise lose an hour to. "The MoJ search macro silently drops `value`" is a finding. "Build the view model in the route, then pass it to the template" is narration.
+
+Two more things that inflate tickets by being in the wrong one: documentation edits and unrelated findings riding along in Technical notes. If it isn't part of the user outcome in the title, it is its own ticket.
+
 ## Workflow
 
 1. If the ask is vague, run `interview-me` or `idea-refine` first.
