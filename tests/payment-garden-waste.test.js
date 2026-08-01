@@ -1,7 +1,6 @@
 const request = require("supertest");
 const applications = require("../src/db/applications");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
 
 const getServer = useSharedServer();
@@ -24,10 +23,6 @@ async function submitDetails(agent, overrides = {}) {
 }
 
 describe("garden waste payment journey - happy path", () => {
-  beforeAll(async () => {
-    await prepareTestDatabase();
-  });
-
   it.each([
     ["1", "£45.00", "Garden waste - 1 bin, £45.00 per year"],
     ["2", "£90.00", "Garden waste - 2 bins, £90.00 per year"],

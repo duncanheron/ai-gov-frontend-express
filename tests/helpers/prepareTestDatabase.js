@@ -1,16 +1,28 @@
 const pool = require("../../src/db/pool");
-const initSql = require("../../migrations/sql/001_init");
-const renameToApplicationsSql = require("../../migrations/sql/003_rename_registrations_to_applications");
-const addPreferencesSql = require("../../migrations/sql/004_add_preferences_to_applications");
-const addFlowSql = require("../../migrations/sql/005_add_flow_to_applications");
-const addFavouriteAnimalSql = require("../../migrations/sql/006_add_favourite_animal_to_applications");
 
-async function prepareTestDatabase() {
-  await pool.query(initSql.up);
-  await pool.query(renameToApplicationsSql.up);
-  await pool.query(addPreferencesSql.up);
-  await pool.query(addFlowSql.up);
-  await pool.query(addFavouriteAnimalSql.up);
+// Isolation strategy: one shared Postgres container (tests/setup/globalSetup.js) serving one
+// database per Jest worker, keyed off JEST_WORKER_ID (tests/setup/setWorkerDatabaseUrl.js points
+// DATABASE_URL at it) - concurrent workers can't collide. Schema for every worker database is
+// created and migrated once, up front, by globalSetup - not here. Within a worker, test files run
+// sequentially against that one database; tests/setup/prepareDatabaseBeforeAll.js truncates every
+// table before each file's own hooks run, so whatever a previous file left behind is gone before
+// that file's tests start.
+
+async function truncateAllTables() {
+  const { rows } = await pool.query(
+    "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'pgmigrations'",
+  );
+
+  if (rows.length === 0) return;
+
+  const tables = rows.map((row) => `"${row.tablename}"`).join(", ");
+  await pool.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
 }
 
-module.exports = { prepareTestDatabase };
+// Kept as a named export - not just a synonym for truncateAllTables - because
+// tests/db/applications-list.test.js (CBLT-129's, left as-is) calls it under this name.
+async function prepareTestDatabase() {
+  await truncateAllTables();
+}
+
+module.exports = { truncateAllTables, prepareTestDatabase };

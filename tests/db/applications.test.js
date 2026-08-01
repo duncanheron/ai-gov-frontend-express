@@ -1,16 +1,11 @@
 const request = require("supertest");
 const applications = require("../../src/db/applications");
 const { extractCsrfToken } = require("../helpers/extractCsrfToken");
-const { prepareTestDatabase } = require("../helpers/prepareTestDatabase");
 const { useSharedServer } = require("../helpers/testServer");
 
 const getServer = useSharedServer();
 
 describe("applications data module", () => {
-  beforeAll(async () => {
-    await prepareTestDatabase();
-  });
-
   it("creates an application then fetches it back by reference", async () => {
     const submittedAt = new Date();
 
