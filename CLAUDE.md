@@ -98,6 +98,16 @@ query and demonstrates the same thing for free.
   human-only action.
 - Don't work or restate a parent/epic issue. Leave it where it is, work the
   sub-issues one at a time, and move the parent to `Done` once all are finished.
+- Slice tickets the way a scrum team would: each one delivers something an end
+  user can do, described from their side ("an applicant can filter by name"),
+  not a technical layer ("add an index", "add the query", "add the template").
+  A ticket that lands a migration nobody can reach, or a query no page calls, is
+  the wrong shape — fold it into the ticket whose behaviour needs it. Splitting
+  by layer so agents can run in parallel is exactly the trade we are not making:
+  a finished ticket must be demonstrable in the running service.
+- Vertical slices are how you keep them small, not an excuse to make them big.
+  If a feature is too large for one PR, cut it into narrower user outcomes
+  (one journey, one field, one page at a time) rather than into layers.
 - `main` is branch-protected; everything goes through a PR.
 - Migrations run in the Vercel build on production deploys — see the README.
   `npm run migrate:up` is for local development only.

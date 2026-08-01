@@ -37,13 +37,24 @@ suggestion.
 
 A ticket is ready for a human to move to `Todo` when its description covers:
 
+- **User outcome** — who it's for and what they can do once it ships, in one
+  sentence from their side.
 - **Problem / context** — why this is needed, not just what to build.
 - **Scope** — what's in and explicitly what's out.
-- **Acceptance criteria** — a short checklist of what "done" looks like.
+- **Acceptance criteria** — a short checklist of what "done" looks like,
+  written as things you could watch someone do in the running service.
 - **Technical notes** — anything Claude would otherwise have to re-derive or
-  ask about mid-implementation (files/patterns to reuse, constraints).
+  ask about mid-implementation (files/patterns to reuse, constraints). Layer
+  detail belongs here as notes, never as its own ticket.
 
 A one-line title with no description is not enough, even for small changes.
+
+Slice by user-visible outcome, never by technical layer: "an applicant can
+filter the list by name" is one ticket, not three (index, query, template).
+If it lands a migration nothing reaches or a query no page calls, it's the
+wrong shape. Too big for one PR? Cut to a narrower outcome — one journey, one
+field, one page — not to a layer. Groundwork with no user surface by nature
+(dependency bump, CI, hosting config) is the exception; say so in the ticket.
 
 ## Workflow
 
