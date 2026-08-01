@@ -71,12 +71,33 @@ of them. Select the element (JSDOM is available), then assert on its attributes
 and text. Whole-page matching is how five tests in this repo came to pass while
 the behaviour they named was broken.
 
+Assert on behaviour, not mechanism. Rows returned, elements rendered, status
+codes. If a test needs the SQL text, the bound parameters, a monkey-patched
+module, or an export that exists only for it, then it cannot observe the
+behaviour it claims to cover — fix the setup rather than working around it. A
+test that reimplements the logic it is testing proves only that it agrees with
+itself: CBLT-129 asserted `params` equalled a hardcoded escaped string, so
+changing the escape character would have kept the suite green while the filter
+broke in production.
+
+Test our software, not our dependencies. Postgres, Express and govuk-frontend
+behaving as documented is not ours to assert. Test our use of them — a test that
+proves `LIKE ... ESCAPE` works is testing Postgres, while one that proves a
+search for `%` returns only the applicant whose name contains `%` tests our
+query and demonstrates the same thing for free.
+
 ## Process
 
 - Work is tracked in Linear (team Cobalt, `CBLT`). Docs and specs live there, not
   in markdown files in this repo.
+- Set `project: "ai-gov-frontend-express"` on every issue. Team Cobalt serves
+  other products too, and a project-less issue is invisible in the project view.
+- Describe attack payloads in prose, not literally — a `<script>` tag or a
+  `DROP TABLE` string in an issue body gets the write blocked by Cloudflare.
 - No code without an approved `Todo` issue. Moving `Backlog` → `Todo` is a
   human-only action.
+- Don't work or restate a parent/epic issue. Leave it where it is, work the
+  sub-issues one at a time, and move the parent to `Done` once all are finished.
 - `main` is branch-protected; everything goes through a PR.
 - Migrations run in the Vercel build on production deploys — see the README.
   `npm run migrate:up` is for local development only.
@@ -85,9 +106,10 @@ the behaviour they named was broken.
 
 This repo runs on a two-stage pipeline: `spec-planner` turns a request into
 Linear tickets (`Backlog`, always — a human moves them to `Todo`); `engineer`
-picks up a `Todo` ticket and takes it through branch, code, tests, and PR,
-then hands off to the `agent-skills` plugin's `test-engineer`,
-`code-reviewer`, and `security-auditor` for verification before merge.
+picks up a `Todo` ticket and takes it through branch, code, tests, and PR.
+Verification by the `agent-skills` plugin's `test-engineer`, `code-reviewer`
+and `security-auditor` happens after that, triggered by the caller rather
+than by `engineer` itself.
 
 - Definitions: `.claude/agents/spec-planner.md`, `.claude/agents/engineer.md`.
 - Repo-specific mechanics (branch naming, PR contents, Linear state
@@ -98,3 +120,13 @@ then hands off to the `agent-skills` plugin's `test-engineer`,
   hygiene, etc.) comes from the `agent-skills` plugin
   (`addyosmani/agent-skills`, enabled as `agent-skills@addy-agent-skills`).
   Don't re-implement what it already provides.
+- `test-engineer`, `code-reviewer`, and `security-auditor` are independent
+  personas — `engineer` never invokes them itself (it has no Agent/Task tool,
+  and personas calling personas is a hard Claude Code platform constraint,
+  not just a convention). Trigger verification from the top-level session when
+  the change warrants it — the caller's judgement, scaled to the change, not a
+  fixed gate on every PR. When you do, run them in parallel in one turn
+  (mirroring the plugin's `/ship` command), giving each only the PR diff and the
+  ticket's acceptance criteria — not `engineer`'s own summary or test-plan
+  narrative — so each forms an independent judgement instead of inheriting the
+  implementer's framing.
