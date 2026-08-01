@@ -44,7 +44,7 @@ Smells that mean you've sliced wrong:
 Legitimate exceptions -- name the exception in the ticket when you use one:
 
 - Groundwork with no user-facing surface by nature (dependency upgrade, CI change, hosting config).
-- A slice genuinely too large for one reviewable PR. Cut it into *narrower user outcomes* -- one journey, one field, one page -- not into layers.
+- A slice genuinely too large for one reviewable PR. Cut it into _narrower user outcomes_ -- one journey, one field, one page -- not into layers.
 
 ## Ticket quality bar
 
