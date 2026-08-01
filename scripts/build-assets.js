@@ -16,8 +16,11 @@ fs.mkdirSync(publicDir, { recursive: true });
 // Stylesheets
 const cssOutDir = path.join(publicDir, "stylesheets");
 fs.mkdirSync(cssOutDir, { recursive: true });
+// `root` is a load path because MoJ Frontend forwards govuk-frontend by the
+// literal path "node_modules/govuk-frontend/...", which node_modules alone
+// cannot resolve.
 const result = sass.compile(path.join(root, "src", "assets", "scss", "main.scss"), {
-  loadPaths: [path.join(root, "node_modules")],
+  loadPaths: [path.join(root, "node_modules"), root],
   style: "compressed",
   quietDeps: true,
 });

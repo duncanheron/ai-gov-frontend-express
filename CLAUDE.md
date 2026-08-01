@@ -51,6 +51,12 @@ comment is longer than the code it describes, cut it.
 - Render user input with Nunjucks `text:`, never `html:`.
 - All AI-provider code stays in `src/services/routeApplicationFlow.js`.
 - UK English in user-facing copy.
+- Two design systems, split by audience. `/applications` is a caseworker view and
+  may use MoJ Frontend components; the citizen journeys (`/`, `/apply`,
+  `/apply-housing`, `/apply-housing-benefit`, `/choose-service`,
+  `/pay-council-tax`, `/pay-garden-waste`) are GOV.UK only. MoJ components are
+  built on GOV.UK ones, so GOV.UK components remain available everywhere — it is
+  reaching for an MoJ component on a citizen page that is wrong.
 
 ## Tests
 

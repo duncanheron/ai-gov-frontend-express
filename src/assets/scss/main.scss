@@ -1,1 +1,9 @@
+// MoJ vendors govuk-frontend and forwards it pre-configured, so it has to load
+// first — Sass refuses to configure a module that is already loaded. That
+// configuration drops the GDS Transport @font-face rules (MoJ assumes a
+// separate govuk-frontend import emits them), so reinstate them explicitly.
+@use "@ministryofjustice/frontend/moj/components/search/search";
 @use "govuk-frontend/dist/govuk" as *;
+@use "govuk-frontend/dist/govuk/helpers/font-faces--internal" as gds-font;
+
+@include gds-font.gds-transport;
