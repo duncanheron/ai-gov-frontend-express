@@ -50,7 +50,7 @@ async function get(reference) {
   return result.rows[0] || null;
 }
 
-const LIKE_WILDCARDS = { "\\": "\\\\", "%": "\\%", "_": "\\_" };
+const LIKE_WILDCARDS = { "\\": "\\\\", "%": "\\%", _: "\\_" };
 
 // Escapes \, % and _ so a name matches literally rather than as a LIKE/ILIKE wildcard.
 function escapeLikeWildcards(value) {
