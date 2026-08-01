@@ -30,9 +30,11 @@ router.get("/", async (req, res) => {
       submittedFormatted: formatDate(application.submitted_at),
     })),
     tableCaption: name ? `Applications matching “${name}”` : "All applications",
-    // A search box is pointless with nothing to search, but must stay on screen
-    // while a search is applied so the caseworker can change or clear it.
-    showSearch: matching.length > 0 || Boolean(name),
+    // A search box is pointless with nothing to search, but stays on screen while a
+    // search is applied so the caseworker can change or clear it. An empty database
+    // with a term is therefore the no-matches state, not "no applications yet".
+    showSearch: Boolean(name) || matching.length > 0,
+    maxNameLength: applicationsQuery.MAX_NAME_LENGTH,
   });
 });
 

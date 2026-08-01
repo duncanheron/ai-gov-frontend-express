@@ -20,10 +20,11 @@
           {{ govukInput({
             classes: "moj-search__input",
             label: { classes: "moj-search__label", text: "Search by applicant name" },
-            id: "name",
+            id: "applicant-name",
             name: "name",
             type: "search",
-            value: searchName
+            value: searchName,
+            attributes: { maxlength: maxNameLength }
           }) }}
 
           {{ govukButton({ classes: "moj-search__button", text: "Search" }) }}
@@ -35,7 +36,8 @@
       {% set tableRows = [] %}
       {% for application in applications %}
         {# govukTable takes only `text` or `html` per cell, so the reference link is
-           built here, where autoescaping applies to the interpolated reference. #}
+           built here, where autoescaping applies to the interpolated reference.
+           Nunjucks has no statement form, so `push` has to land in a discarded binding. #}
         {% set referenceCell %}<a class="govuk-link" href="/applications/{{ application.reference }}">{{ application.reference }}</a>{% endset %}
         {% set appended = tableRows.push([
           { text: application.fullName },

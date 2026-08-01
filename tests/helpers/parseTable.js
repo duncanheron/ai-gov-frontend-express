@@ -21,7 +21,13 @@ function parseTable(html, selector = "table") {
     rows: [...table.querySelectorAll("tbody tr")].map((row) =>
       [...row.querySelectorAll("th, td")].map((cell) => {
         const link = cell.querySelector("a");
-        return { text: cell.textContent.trim(), href: link ? link.getAttribute("href") : null };
+        return {
+          text: cell.textContent.trim(),
+          href: link ? link.getAttribute("href") : null,
+          // Cell content that should be text renders no element of its own, so an
+          // empty list here is what distinguishes escaped markup from live markup.
+          childElements: [...cell.children].map((child) => child.tagName.toLowerCase()),
+        };
       }),
     ),
   };

@@ -1,6 +1,7 @@
 const { JSDOM } = require("jsdom");
 const request = require("supertest");
 const applications = require("../src/db/applications");
+const { MAX_NAME_LENGTH } = require("../src/lib/applicationsQuery");
 const { createApplication } = require("./helpers/applicationFactory");
 const { parseTable } = require("./helpers/parseTable");
 const { truncateAllTables } = require("./helpers/prepareTestDatabase");
@@ -22,6 +23,9 @@ function parseListPage(html) {
   const parsed = {
     search: input && {
       value: input.getAttribute("value"),
+      // A term that breaks out of value="…" adds attributes rather than elements, so
+      // this is the only thing that sees it - elementCount below cannot.
+      attributeNames: input.getAttributeNames().sort(),
       type: input.getAttribute("type"),
       label: document.querySelector(`label[for="${input.id}"]`).textContent.trim(),
       action: form.getAttribute("action"),
@@ -92,7 +96,11 @@ describe("applications list page", () => {
       `/applications/${hopper.reference}`,
     ]);
     expect(table.caption).toBe("All applications");
-    expect(parseListPage(response.text).messages).toEqual([]);
+    const page = parseListPage(response.text);
+    expect(page.messages).toEqual([]);
+    // Without this the search box could vanish from the page a caseworker lands on,
+    // leaving no way to start a search at all, and every other case here still pass.
+    expect(page.search).toMatchObject({ value: "" });
   });
 
   it("renders a reference containing markup as the link's text, not as elements", async () => {
@@ -104,6 +112,17 @@ describe("applications list page", () => {
     const [[, referenceCell]] = parseTable(response.text).rows;
     expect(referenceCell.text).toBe(reference);
     expect(referenceCell.href).toBe(`/applications/${reference}`);
+  });
+
+  it("renders an applicant name containing markup as text, not as elements", async () => {
+    const fullName = 'Eve <b>Bold</b> <script>alert(1)</script> "Quoted"';
+    await createApplication({ fullName });
+
+    const response = await request(getServer()).get("/applications");
+
+    const [[nameCell]] = parseTable(response.text).rows;
+    expect(nameCell.text).toBe(fullName);
+    expect(nameCell.childElements).toEqual([]);
   });
 
   it("shows only the applicants whose name matches the search term, newest first", async () => {
@@ -152,7 +171,9 @@ describe("applications list page", () => {
       "Marianne Grace",
       "Grace Hopper",
     ]);
-    expect(parseListPage(response.text).messages).toEqual([]);
+    const page = parseListPage(response.text);
+    expect(page.messages).toEqual([]);
+    expect(page.search).toMatchObject({ value: "" });
   });
 
   it("keeps the trimmed term in a search box that submits back to /applications", async () => {
@@ -162,6 +183,7 @@ describe("applications list page", () => {
 
     expect(parseListPage(response.text).search).toEqual({
       value: "grace",
+      attributeNames: ["class", "id", "maxlength", "name", "type", "value"],
       type: "search",
       label: "Search by applicant name",
       action: "/applications",
@@ -213,6 +235,45 @@ describe("applications list page", () => {
     expect(page.search.value).toBe(term);
     expect(page.scripts.some((script) => script.includes("alert(1)"))).toBe(false);
     expect(page.elementCount).toBe(parseListPage(benign.text).elementCount);
+  });
+
+  it.each([
+    ["a double-quoted event handler", '" autofocus onfocus="alert(1)'],
+    ["a single-quoted event handler", "' autofocus onfocus='alert(1)"],
+    ["a closing quote and a new element", '"><img src=x onerror=alert(1)>'],
+  ])("renders %s as the search box's value, adding no attribute of its own", async (_d, term) => {
+    await seedThreeApplicants();
+
+    const response = await request(getServer()).get(
+      `/applications?name=${encodeURIComponent(term)}`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(parseListPage(response.text).search).toMatchObject({
+      value: term,
+      attributeNames: ["class", "id", "maxlength", "name", "type", "value"],
+    });
+  });
+
+  it("renders a normal page for a term containing a NUL byte, which Postgres text cannot hold", async () => {
+    await seedThreeApplicants();
+
+    const response = await request(getServer()).get("/applications?name=%00grace");
+
+    expect(response.status).toBe(200);
+    expect(names(parseTable(response.text))).toEqual(["Marianne Grace", "Grace Hopper"]);
+  });
+
+  it("caps an over-long term rather than reflecting all of it back", async () => {
+    await seedThreeApplicants();
+    const term = "a".repeat(MAX_NAME_LENGTH + 300);
+
+    const response = await request(getServer()).get(`/applications?name=${term}`);
+
+    expect(response.status).toBe(200);
+    const page = parseListPage(response.text);
+    expect(page.search.value).toHaveLength(MAX_NAME_LENGTH);
+    expect(page.messages).toEqual([`No applications match “${"a".repeat(MAX_NAME_LENGTH)}”.`]);
   });
 
   it("renders a normal page for a term that tries to destroy the table, leaving every row intact", async () => {
