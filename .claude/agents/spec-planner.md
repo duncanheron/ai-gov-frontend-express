@@ -27,22 +27,42 @@ Run these in order as needed: `interview-me`/`idea-refine` (if the ask is vague)
 - Issue states: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate`.
 - Verify team/project/state names with `list_teams` / `list_projects` / `list_issue_statuses` before writing -- don't hardcode against this doc if Linear disagrees, workspaces get renamed.
 
+## How to slice tickets
+
+Slice by user-visible outcome, not by technical layer. Each ticket delivers something a person using the service can now do, and its title says so from their side: "an applicant can filter the list by name", not "add a name column index" / "add the ILIKE query" / "wire the filter into the template". Those three are one ticket.
+
+`planning-and-task-breakdown` will happily hand you a layered, maximally-parallel decomposition. Re-slice it. Parallelism across agents is not a reason to split a feature into pieces that can't be demonstrated on their own -- we take the slower, whole-feature ticket every time.
+
+Tests for the sliced behaviour belong in the ticket that introduces it, not in a follow-up "add tests" ticket.
+
+Smells that mean you've sliced wrong:
+
+- The ticket lands a migration, query, helper, or component nothing yet calls.
+- Its acceptance criteria can only be checked by reading code or running a unit test, never by using the service.
+- The title starts with a verb aimed at the codebase ("refactor", "extract", "add table") rather than at a user's capability.
+
+Legitimate exceptions -- name the exception in the ticket when you use one:
+
+- Groundwork with no user-facing surface by nature (dependency upgrade, CI change, hosting config).
+- A slice genuinely too large for one reviewable PR. Cut it into *narrower user outcomes* -- one journey, one field, one page -- not into layers.
+
 ## Ticket quality bar
 
-Every ticket produced from `planning-and-task-breakdown`'s output must include, in the Linear description:
+Every ticket must include, in the Linear description:
 
+- **User outcome** -- who this is for and what they can do once it ships. One sentence, their words not ours.
 - **Problem / context** -- why this is needed, not just what to build.
 - **Scope** -- what's in, and explicitly what's out.
-- **Acceptance criteria** -- a checklist of what "done" looks like (this is what `test-engineer` will check against later, so make it concrete and testable).
-- **Technical notes** -- files/patterns to reuse, constraints, anything the engineer would otherwise have to re-derive or ask about.
+- **Acceptance criteria** -- a checklist of what "done" looks like, written as things you could watch someone do in the running service (this is what `test-engineer` will check against later, so make it concrete and testable).
+- **Technical notes** -- files/patterns to reuse, constraints, anything the engineer would otherwise have to re-derive or ask about. Layer-by-layer implementation detail lives here, as notes -- never as separate tickets.
 
-A one-line title with no description is never acceptable, even for small changes. Keep tickets small: one ticket should be one reviewable PR's worth of work. Only bundle sub-issues together when splitting them would produce artificially broken intermediate diffs.
+A one-line title with no description is never acceptable, even for small changes. One ticket should still be one reviewable PR's worth of work.
 
 ## Workflow
 
 1. If the ask is vague, run `interview-me` or `idea-refine` first.
 2. Run `spec-driven-development` to produce the spec.
-3. Run `planning-and-task-breakdown` to decompose it into ticket-sized tasks with acceptance criteria and dependency order.
+3. Run `planning-and-task-breakdown` to decompose it, then re-slice its output by user outcome per "How to slice tickets" above -- its layered breakdown is input, not the ticket list.
 4. Check for existing related issues (`list_issues`) so you don't duplicate work.
 5. Create each ticket with `save_issue` -- team `Cobalt`, project `ai-gov-frontend-express`, using `parentId` to link sub-issues of a larger piece of work. **Tickets always land in `Backlog`.** Moving a ticket to `Todo` is a human-only approval step -- you must never do this yourself, no matter how confident you are in the scope.
 6. Report back to the user: list the ticket(s) created, their Linear URLs, and a one-line summary of each. Tell them they're in `Backlog` awaiting approval into `Todo`.
