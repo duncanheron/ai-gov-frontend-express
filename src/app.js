@@ -36,7 +36,14 @@ function createApp() {
 
   const viewsPath = path.join(__dirname, "views");
   const govukFrontendPath = path.join(__dirname, "..", "node_modules", "govuk-frontend", "dist");
-  nunjucks.configure([viewsPath, govukFrontendPath], {
+  const mojFrontendPath = path.join(
+    __dirname,
+    "..",
+    "node_modules",
+    "@ministryofjustice",
+    "frontend",
+  );
+  nunjucks.configure([viewsPath, govukFrontendPath, mojFrontendPath], {
     autoescape: true,
     express: app,
     watch: !config.isProduction && !config.isTest,
