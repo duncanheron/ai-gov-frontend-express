@@ -1,4 +1,6 @@
 {% extends "layout.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 
 {% block pageTitle %}Applications{% endblock %}
@@ -8,17 +10,52 @@
   <div class="govuk-grid-column-full">
     <h1 class="govuk-heading-xl">Applications</h1>
 
-    {% if rows.length %}
+    {% if showSearch %}
+      {# mojSearch's template hardcodes its govukInput call and never forwards `value`,
+         so the macro cannot echo the search term back (@ministryofjustice/frontend
+         10.0.1). This is that template with the one parameter it omits - keep it
+         composed rather than reverting to the macro. #}
+      <div class="moj-search">
+        <form action="/applications" method="get">
+          {{ govukInput({
+            classes: "moj-search__input",
+            label: { classes: "moj-search__label", text: "Search by applicant name" },
+            id: "name",
+            name: "name",
+            type: "search",
+            value: searchName
+          }) }}
+
+          {{ govukButton({ classes: "moj-search__button", text: "Search" }) }}
+        </form>
+      </div>
+    {% endif %}
+
+    {% if applications.length %}
+      {% set tableRows = [] %}
+      {% for application in applications %}
+        {# govukTable takes only `text` or `html` per cell, so the reference link is
+           built here, where autoescaping applies to the interpolated reference. #}
+        {% set referenceCell %}<a class="govuk-link" href="/applications/{{ application.reference }}">{{ application.reference }}</a>{% endset %}
+        {% set appended = tableRows.push([
+          { text: application.fullName },
+          { html: referenceCell },
+          { text: application.submittedFormatted }
+        ]) %}
+      {% endfor %}
+
       {{ govukTable({
-        caption: "All applications",
+        caption: tableCaption,
         captionClasses: "govuk-visually-hidden",
         head: [
           { text: "Full name" },
           { text: "Reference" },
           { text: "Submitted" }
         ],
-        rows: rows
+        rows: tableRows
       }) }}
+    {% elif searchName %}
+      <p class="govuk-body">No applications match “{{ searchName }}”.</p>
     {% else %}
       <p class="govuk-body">There are no applications yet.</p>
     {% endif %}

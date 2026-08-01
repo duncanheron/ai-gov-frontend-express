@@ -1,6 +1,7 @@
 const express = require("express");
 
 const applications = require("../db/applications");
+const applicationsQuery = require("../lib/applicationsQuery");
 const { preferenceLabels } = require("../validation/applyValidation");
 
 const router = express.Router();
@@ -18,16 +19,20 @@ const flowAnswerLabels = {
 };
 
 router.get("/", async (req, res) => {
-  const allApplications = await applications.list();
+  const { name } = applicationsQuery.parse(req.query);
+  const matching = await applications.list({ name });
 
   res.render("applications/list.njk", {
-    rows: allApplications.map((application) => [
-      { text: application.full_name },
-      {
-        html: `<a class="govuk-link" href="/applications/${application.reference}">${application.reference}</a>`,
-      },
-      { text: formatDate(application.submitted_at) },
-    ]),
+    searchName: name,
+    applications: matching.map((application) => ({
+      fullName: application.full_name,
+      reference: application.reference,
+      submittedFormatted: formatDate(application.submitted_at),
+    })),
+    tableCaption: name ? `Applications matching “${name}”` : "All applications",
+    // A search box is pointless with nothing to search, but must stay on screen
+    // while a search is applied so the caseworker can change or clear it.
+    showSearch: matching.length > 0 || Boolean(name),
   });
 });
 
