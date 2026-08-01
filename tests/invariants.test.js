@@ -1,5 +1,4 @@
 const { JSDOM } = require("jsdom");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
 const { resetTestResponses } = require("../src/services/routeApplicationFlow");
 const { buildAllPages } = require("./helpers/allPages");
@@ -21,10 +20,6 @@ const getServer = useSharedServer();
 const pages = buildAllPages(getServer);
 
 describe("structural HTML invariants", () => {
-  beforeAll(async () => {
-    await prepareTestDatabase();
-  });
-
   afterEach(() => {
     resetTestResponses();
   });

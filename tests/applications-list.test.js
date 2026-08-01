@@ -1,13 +1,17 @@
 const request = require("supertest");
 const applications = require("../src/db/applications");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
+const { truncateAllTables } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
 
 const getServer = useSharedServer();
 
 describe("applications list page", () => {
-  beforeAll(async () => {
-    await prepareTestDatabase();
+  // beforeEach, not beforeAll: one test asserts the empty state and the other seeds rows -
+  // under --randomize either can run first, so each needs its own clean table. The schema
+  // itself is guaranteed by tests/setup/prepareDatabaseBeforeAll.js, so only truncation is
+  // needed here.
+  beforeEach(async () => {
+    await truncateAllTables();
   });
 
   it("shows an empty state when there are no applications", async () => {

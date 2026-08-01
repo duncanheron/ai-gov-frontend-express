@@ -1,7 +1,6 @@
 const fs = require("node:fs");
 const request = require("supertest");
 const { JSDOM } = require("jsdom");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 const { useSharedServer } = require("./helpers/testServer");
 const { resetTestResponses } = require("../src/services/routeApplicationFlow");
 const {
@@ -34,10 +33,6 @@ async function expectNoViolations(html) {
 }
 
 describe("accessibility", () => {
-  beforeAll(async () => {
-    await prepareTestDatabase();
-  });
-
   afterEach(() => {
     resetTestResponses();
   });

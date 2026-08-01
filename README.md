@@ -8,7 +8,9 @@ Journey: homepage (start page) -> your details -> check your answers -> confirma
 
 - Node.js 24.x (see `.nvmrc`)
 - PostgreSQL (for submitted registrations - see `.env.example` for the `DATABASE_URL` shape)
-- Docker + Docker Compose (optional, for containerised runs - brings up Postgres for you)
+- Docker running - required to run tests (`npm test` starts a real Postgres in a Testcontainers
+  container, no manual database setup needed) and optional otherwise, for containerised runs via
+  Docker Compose (brings up Postgres for you)
 
 ## Local setup
 
@@ -26,7 +28,10 @@ The app is served at http://localhost:3000.
 
 - `npm run dev` - build assets, then start the app with nodemon (auto-restart on server-side changes)
 - `npm start` - build assets, then start the app for production
-- `npm test` - build assets, then run the Jest test suite (integration + accessibility)
+- `npm test` - build assets, then run the Jest test suite (integration + accessibility). File
+  order is randomised each run and the seed is printed at the start; replay a run that failed
+  with `JEST_SEQUENCER_SEED=<seed> npm test` - this reproduces the file order, not timing, so it
+  won't reliably reproduce a race
 - `npm run lint` / `npm run lint:fix` - ESLint
 - `npm run format` / `npm run format:check` - Prettier
 - `npm run build:assets` - compile GOV.UK Frontend Sass/JS/static assets into `public/`
@@ -80,10 +85,10 @@ Three things worth knowing about that:
 
 - Views are rendered with Nunjucks, using GOV.UK Frontend's component macros
   (`node_modules/govuk-frontend/dist`).
-- Registration answers are held in the session (`express-session`, in-memory store) for the
-  duration of the journey and cleared once a reference number is issued. Sessions are never
-  persisted to Postgres - only a submitted registration is, at the moment the user submits
-  (see `src/db/registrations.js`).
+- Registration answers are held in the session (`express-session`, backed by Postgres via
+  `connect-pg-simple`) for the duration of the journey and cleared once a reference number is
+  issued. A submitted application is written separately, at the moment the user submits
+  (see `src/db/applications.js`).
 - Postgres access goes through a single hand-written-SQL data layer (`src/db/pool.js` and
   friends) - no ORM. Schema changes are tracked with `node-pg-migrate` (`migrations/`).
 - CSRF protection (`csrf-sync`) and a nonce-based Content-Security-Policy (`helmet`) are applied

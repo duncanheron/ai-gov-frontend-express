@@ -54,7 +54,8 @@ comment is longer than the code it describes, cut it.
 
 ## Tests
 
-Jest + Supertest, pg-mem in test env. A test must fail if the behaviour it covers
+Jest + Supertest, against a real Postgres started by Testcontainers (requires Docker
+running locally; CI already has it). A test must fail if the behaviour it covers
 breaks — check by reverting the code and watching it go red. A test that passes
 either way is worse than none, because it reads as coverage.
 

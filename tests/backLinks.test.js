@@ -1,11 +1,8 @@
 const request = require("supertest");
 const { useSharedServer } = require("./helpers/testServer");
 const { extractCsrfToken } = require("./helpers/extractCsrfToken");
-const { prepareTestDatabase } = require("./helpers/prepareTestDatabase");
 
 const getServer = useSharedServer();
-
-beforeAll(() => prepareTestDatabase());
 
 const VALID_PERSON = {
   fullName: "Ada Lovelace",
