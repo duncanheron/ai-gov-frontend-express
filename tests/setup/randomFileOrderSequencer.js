@@ -27,7 +27,9 @@ class RandomFileOrderSequencer extends Sequencer {
     const seed = resolveSeed();
     const random = mulberry32(seed);
 
-    console.log(`Test file order seed: ${seed} (replay with JEST_SEQUENCER_SEED=${seed})`);
+    // console.error, not console.log - this runs in the orchestrating process and `--json`
+    // writes its report to the same stdout, so anything else on stdout breaks JSON.parse.
+    console.error(`Test file order seed: ${seed} (replay with JEST_SEQUENCER_SEED=${seed})`);
 
     // Jest's own discovery order isn't guaranteed stable across runs, and the same seed must
     // produce the same shuffle regardless of it - sort to a canonical order first.
