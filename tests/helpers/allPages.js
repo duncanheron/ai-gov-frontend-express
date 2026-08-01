@@ -226,6 +226,22 @@ function buildAllPages(getServer) {
       },
     },
     {
+      name: "applications list page (search results)",
+      get: async () => {
+        const agent = freshAgent();
+        await reachApplyConfirmation(agent);
+        return agent.get(`/applications?name=${encodeURIComponent(PERSON.fullName)}`);
+      },
+    },
+    {
+      name: "applications list page (no search matches)",
+      get: async () => {
+        const agent = freshAgent();
+        await reachApplyConfirmation(agent);
+        return agent.get("/applications?name=nobody-of-that-name");
+      },
+    },
+    {
       name: "application detail page",
       get: async () => {
         const agent = freshAgent();

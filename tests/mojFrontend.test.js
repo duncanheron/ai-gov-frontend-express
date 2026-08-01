@@ -3,8 +3,9 @@ const nunjucks = require("nunjucks");
 const request = require("supertest");
 const { useSharedServer } = require("./helpers/testServer");
 
-// No page uses an MoJ component yet (CBLT-130 adopts the first one), so until
-// then this is the only thing holding the wiring up.
+// The applications list is the only page using MoJ styles, and it composes the
+// search markup rather than calling mojSearch (the macro drops `value`), so these
+// tests are what hold the macro resolution and stylesheet wiring up.
 
 const getServer = useSharedServer();
 
