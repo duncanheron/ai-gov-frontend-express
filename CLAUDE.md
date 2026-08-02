@@ -139,4 +139,6 @@ than by `engineer` itself.
   (mirroring the plugin's `/ship` command), giving each only the PR diff and the
   ticket's acceptance criteria — not `engineer`'s own summary or test-plan
   narrative — so each forms an independent judgement instead of inheriting the
-  implementer's framing.
+  implementer's framing. Give each its own worktree (`isolation: "worktree"`):
+  they mutate source to test their findings, and in a shared checkout one
+  agent's in-flight mutation surfaces as another agent's phantom failure.
