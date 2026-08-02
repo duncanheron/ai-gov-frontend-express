@@ -88,6 +88,23 @@ describe("MoJ Frontend styles", () => {
     expect(button[1]).toBe(expected);
   });
 
+  // Component stylesheets reference images by path, and the build copies image
+  // directories per framework - so adopting a component whose CSS wants an icon the
+  // build never copies leaves a 404 that no page test notices, because the markup is
+  // perfectly correct and only the glyph is missing.
+  it("serves every image the compiled stylesheet references", async () => {
+    const stylesheet = await request(getServer()).get("/stylesheets/main.css");
+    const referenced = [...new Set(stylesheet.text.match(/\/assets\/images\/[\w.-]+/g) ?? [])];
+
+    expect(referenced.length).toBeGreaterThan(0);
+
+    const statuses = await Promise.all(
+      referenced.map(async (path) => `${path} ${(await request(getServer()).get(path)).status}`),
+    );
+
+    expect(statuses.filter((entry) => !entry.endsWith(" 200"))).toEqual([]);
+  });
+
   it("still serves the GDS Transport font faces, which MoJ's vendored config drops", async () => {
     const response = await request(getServer()).get("/stylesheets/main.css");
 

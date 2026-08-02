@@ -493,6 +493,25 @@ describe("applications list page - service filter", () => {
     expect(page.search).toMatchObject({ value: "" });
   });
 
+  // Every other link on the page carries the sort. This one dropped it, which is a
+  // different thing from criterion 6's deliberate reset of the search and services.
+  it("keeps the sort when clearing the filters", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(
+      "/applications?name=applicant&service=housing&sort=name&direction=ascending",
+    );
+
+    const { clearLink } = parseListPage(response.text).filter.selectedFilters;
+    expect(clearLink.href).toBe("/applications?sort=name&direction=ascending");
+
+    const cleared = await request(getServer()).get(clearLink.href);
+    expect(cleared.status).toBe(200);
+    const table = parseTable(cleared.text);
+    expect(names(table)).toHaveLength(5);
+    expect(table.headings.find((cell) => cell.text === "Full name").ariaSort).toBe("ascending");
+  });
+
   it("clears only the search, keeping the services, through the search's own clear link", async () => {
     await seedOnePerService();
 

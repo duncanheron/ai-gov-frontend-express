@@ -77,7 +77,12 @@ router.get("/", async (req, res) => {
     selectedFilters: services.length
       ? {
           heading: { text: "Selected filters" },
-          clearLink: { text: "Clear filters", href: applicationsQuery.buildUrl() },
+          // Clears the search and the services, which is what the link says. The sort
+          // is not a filter and every other link on the page keeps it.
+          clearLink: {
+            text: "Clear filters",
+            href: applicationsQuery.buildUrl(current, { name: "", services: [] }),
+          },
           categories: [
             {
               heading: { text: "Service" },

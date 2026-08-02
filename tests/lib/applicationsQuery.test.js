@@ -48,6 +48,16 @@ describe("applicationsQuery.parse", () => {
     expect(parse({ name })).toEqual({ name: expected, services: [], ...DEFAULT_ORDER });
   });
 
+  // Trimming before slicing can leave the cut end on a space, which is then echoed into
+  // the box, the caption and every link on the page - where it parses back to a
+  // different term, so a link does not lead to the page that built it.
+  it("caps the name without leaving a trailing space, so the term round-trips", () => {
+    const capped = parse({ name: `${"a".repeat(MAX_NAME_LENGTH - 1)}  b` }).name;
+
+    expect(capped).toBe(capped.trim());
+    expect(parse({ name: capped }).name).toBe(capped);
+  });
+
   it("caps the name at the length the apply form allows on full_name", () => {
     const { name } = parse({ name: "a".repeat(MAX_NAME_LENGTH + 50) });
 

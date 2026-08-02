@@ -59,7 +59,9 @@ function toServices(value) {
 // than as an array.
 function parse(query) {
   return {
-    name: toStr(query.name).replace(CONTROL_CHARACTERS, "").trim().slice(0, MAX_NAME_LENGTH),
+    // Slice then trim: trimming first can leave the cut end on a space, which then
+    // reflects into every link and parses back as a different term.
+    name: toStr(query.name).replace(CONTROL_CHARACTERS, "").slice(0, MAX_NAME_LENGTH).trim(),
     services: toServices(query.service),
     // An unrecognised sort falls back rather than erroring, so a hand-edited URL
     // is a normal page. This is also what keeps an arbitrary string away from
