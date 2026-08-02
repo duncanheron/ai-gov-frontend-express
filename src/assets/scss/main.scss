@@ -13,11 +13,16 @@
 
 @include gds-font.gds-transport;
 
-// Not redundant with MoJ's own rule of the same name: the load order above emits it
-// before .govuk-button's margin, and equal specificity means the later rule wins, so
-// the button hangs a margin above the input the flex row aligns it against.
+// Not redundant with MoJ's own rule of the same name: the load order above emits MoJ's
+// first, and equal specificity means govuk's later rule wins. So both of MoJ's opt-outs
+// have to be restated here or they silently do nothing.
+//   margin-bottom - otherwise the button hangs above the input the flex row aligns it to.
+//   width         - govuk sets 100% unconditionally and only restores auto at tablet, so
+//                   without this the button fills the row under 640px and squeezes the
+//                   label and input beside it down to nothing.
 .moj-search__button {
   margin-bottom: 0;
+  width: auto;
 }
 
 // MoJ's sortable-table styling hangs off `[aria-sort] button` and the arrows are
