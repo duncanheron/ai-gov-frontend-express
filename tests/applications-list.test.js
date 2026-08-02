@@ -55,6 +55,9 @@ function parseListPage(html) {
     searchCarriesServices: form && hiddenValues(form, "service"),
     searchCarriesOrder: form && hiddenOrder(form),
     clearLink: clear && { text: clear.textContent.trim(), href: clear.getAttribute("href") },
+    // The class MoJ's toggle adds to collapse the panel. Rendered by the server it would
+    // hide the filters from anyone without JavaScript (CBLT-139).
+    filterHiddenOnTheServer: filter ? filter.classList.contains("moj-js-hidden") : null,
     filter: filter && {
       action: filterForm.getAttribute("action"),
       method: filterForm.getAttribute("method"),
@@ -610,9 +613,11 @@ describe("applications list page - service filter", () => {
       method: "get",
       submitText: "Apply filters",
     });
-    // MoJ's filter component ships JavaScript that collapses the panel (CBLT-139). Until
-    // that lands the panel must need none, so nothing here may depend on a script.
-    expect(page.scriptSources).toEqual(["/javascripts/govuk-frontend.min.js"]);
+    // CBLT-139 added MoJ's JavaScript to collapse this panel, so the page is no longer
+    // script-free. What has to stay true is that the panel needs none of it: applying a
+    // filter is a GET form, and nothing here is hidden until that script chooses to.
+    expect(page.filterHiddenOnTheServer).toBe(false);
+    expect(page.filter.checkboxes).toHaveLength(5);
   });
 });
 
@@ -801,10 +806,10 @@ describe("applications list page - sorting", () => {
     const table = parseTable(response.text);
     // MoJ's sortable-table reorders rows already in the DOM. Attached here it would
     // sort only the current page once CBLT-138 lands, and nothing without JavaScript.
+    // CBLT-139 loads MoJ's bundle on this page, so "no MoJ script anywhere" is no longer
+    // the guarantee - "MoJ's script is not wired to this table" is, and it is the one
+    // that matters.
     expect(table.sortModule).toBeNull();
-    expect(parseListPage(response.text).scriptSources).toEqual([
-      "/javascripts/govuk-frontend.min.js",
-    ]);
     // Every heading is a plain link, so the order survives with scripting off.
     expect(heading(table, "Full name").href).toBe("/applications?sort=name&direction=descending");
   });

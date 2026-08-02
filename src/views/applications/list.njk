@@ -7,6 +7,29 @@
 
 {% block pageTitle %}Applications{% endblock %}
 
+{# Caseworker-only. MoJ's bundle inlines its own copy of GOV.UK Frontend, so this runs
+   alongside the layout's GOV.UK initAll rather than replacing it - MoJ's does not
+   initialise GOV.UK components, and the header and service navigation would stop
+   working.
+
+   The one component, constructed directly, rather than MoJ's initAll. Verified against
+   version 10 in a browser: initAll iterates a hardcoded list that omits
+   FilterToggleButton entirely, so it returns cleanly having built nothing - the button
+   simply never appears. The list does include SortableTable, which would then wire
+   itself to any table we later mark up, which CBLT-137 deliberately avoids. #}
+{% block pageScripts %}
+  <script type="module" nonce="{{ cspNonce }}" src="/javascripts/moj-frontend.min.js"></script>
+  <script type="module" nonce="{{ cspNonce }}">
+    import { FilterToggleButton } from '/javascripts/moj-frontend.min.js'
+
+    // Absent whenever there is nothing to filter.
+    const filter = document.querySelector('[data-module="moj-filter"]')
+    if (filter) {
+      new FilterToggleButton(filter)
+    }
+  </script>
+{% endblock %}
+
 {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
@@ -60,7 +83,9 @@
         }) }}
       {% endset %}
 
-      <form action="/applications" method="get" class="govuk-!-margin-bottom-6">
+      {# The top margin separates the toggle from the search box above it, so the two
+         controls do not read as one group. #}
+      <form action="/applications" method="get" class="govuk-!-margin-top-4 govuk-!-margin-bottom-6">
         {% if searchName %}
           <input type="hidden" name="name" value="{{ searchName }}">
         {% endif %}
@@ -72,11 +97,23 @@
         {# mojFilter puts `optionsHtml` through `| safe`. Sound here, and only because of
            what this block is: one macro call over the server-defined service list, with
            no request data reaching it. The checkbox labels and values are ours. #}
+        {# MoJ's JavaScript appends the toggle button here, so this sits directly on top
+           of the panel it controls. `.moj-action-bar__filter` is the selector the
+           component looks for, kept as the hook - but the action-bar component's own
+           styles are deliberately not imported: they draw a 2px divider for separating
+           several actions from each other, and there is only ever one here. #}
+        <div class="moj-action-bar__filter app-filter-toggle"></div>
+
+        {# data-start-hidden="false" is load-bearing. The component defaults it to true
+           and applies it *after* its media-query check rather than as the starting
+           point, so the default collapses the panel on desktop too. False lets the
+           media query decide: collapsed on narrow, open on wide. #}
         {{ mojFilter({
           heading: { text: "Filter" },
           selectedFilters: selectedFilters,
           submit: { text: "Apply filters" },
-          optionsHtml: serviceOptionsHtml
+          optionsHtml: serviceOptionsHtml,
+          attributes: { "data-start-hidden": "false" }
         }) }}
       </form>
     {% endif %}

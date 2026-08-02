@@ -5,6 +5,7 @@ const sass = require("sass");
 const root = path.join(__dirname, "..");
 const publicDir = path.join(root, "public");
 const govukDist = path.join(root, "node_modules", "govuk-frontend", "dist", "govuk");
+const mojDist = path.join(root, "node_modules", "@ministryofjustice", "frontend", "moj");
 
 function copy(from, to) {
   fs.cpSync(from, to, { recursive: true });
@@ -38,6 +39,12 @@ copy(
   path.join(root, "src", "assets", "javascripts", "application.js"),
   path.join(jsOutDir, "application.js"),
 );
+// The minified bundle, not `all.bundle.mjs`: that one still imports the bare specifier
+// "govuk-frontend", which no browser resolves without an import map, so it would fail at
+// runtime while looking perfectly reasonable here. This one inlines its own copy of the
+// framework instead - roughly 70KB duplicated on caseworker pages, accepted.
+copy(path.join(mojDist, "moj-frontend.min.js"), path.join(jsOutDir, "moj-frontend.min.js"));
+copy(path.join(mojDist, "moj-frontend.min.js.map"), path.join(jsOutDir, "moj-frontend.min.js.map"));
 
 // Static assets (fonts, images, manifest)
 const assetsOutDir = path.join(publicDir, "assets");
