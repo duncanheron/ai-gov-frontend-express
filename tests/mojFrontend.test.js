@@ -41,6 +41,27 @@ describe("MoJ Frontend", () => {
     expect(response.text).toContain(".moj-search");
   });
 
+  // Layout cannot be asserted in JSDOM, which computes no cascade and no box model.
+  // What broke the button's alignment was source order between two equal-specificity
+  // rules, and that is readable from the stylesheet itself: MoJ's own
+  // .moj-search__button rule is emitted before .govuk-button's margin, so without an
+  // override emitted afterwards the button keeps a bottom margin and the flex row
+  // lifts it clear of the input.
+  it("settles .moj-search__button's bottom margin after .govuk-button's", async () => {
+    const response = await request(getServer()).get("/stylesheets/main.css");
+
+    const lastMargin = (selector) => {
+      const rule = new RegExp(`\\${selector}\\{[^}]*margin-bottom:([^;}]+)[^}]*\\}`, "g");
+      const matches = [...response.text.matchAll(rule)];
+      return matches.length ? matches[matches.length - 1] : null;
+    };
+    const button = lastMargin(".moj-search__button");
+    const govukButton = lastMargin(".govuk-button");
+
+    expect(button.index).toBeGreaterThan(govukButton.index);
+    expect(button[1]).toBe("0");
+  });
+
   it("still serves the GDS Transport font faces, which MoJ's vendored config drops", async () => {
     const response = await request(getServer()).get("/stylesheets/main.css");
 

@@ -7,3 +7,10 @@
 @use "govuk-frontend/dist/govuk/helpers/font-faces--internal" as gds-font;
 
 @include gds-font.gds-transport;
+
+// Not redundant with MoJ's own rule of the same name: the load order above emits it
+// before .govuk-button's margin, and equal specificity means the later rule wins, so
+// the button hangs a margin above the input the flex row aligns it against.
+.moj-search__button {
+  margin-bottom: 0;
+}
