@@ -47,6 +47,11 @@ comment is longer than the code it describes, cut it.
 - Validators return `{ values, errors, fieldErrors, isValid }` and never throw.
   Mirror `src/validation/applyValidation.js`.
 - Read request-body fields through `toStr` so a duplicated parameter can't throw.
+- Bind every value as a query parameter. `ORDER BY` cannot take one, so its column
+  and direction are looked up from a whitelist in `src/db/applications.js` and are
+  never interpolated from a request — use `Object.hasOwn`, or `?sort=constructor`
+  reaches SQL from `Object.prototype`. Anything unrecognised falls back to the
+  default rather than erroring.
 - Compute display values in the route into a view model, not in templates.
 - Render user input with Nunjucks `text:`, never `html:`.
 - All AI-provider code stays in `src/services/routeApplicationFlow.js`.

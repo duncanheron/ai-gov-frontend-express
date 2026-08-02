@@ -215,6 +215,15 @@ describe("applicationsQuery.sortUrl", () => {
     );
   });
 
+  // The only case that separates "reverse the active column" from "reverse whatever
+  // is ascending": moving to a new column while the current one is ascending. Both
+  // rules agree everywhere else, so without this a swapped condition goes unnoticed.
+  it("starts a new column ascending even while the active column is ascending", () => {
+    expect(sortUrl({ ...listing, sort: "name", direction: "ascending" }, "submitted")).toBe(
+      "/applications?sort=submitted&direction=ascending",
+    );
+  });
+
   it("reverses the column that is already active", () => {
     expect(sortUrl({ ...listing, sort: "name", direction: "ascending" }, "name")).toBe(
       "/applications?sort=name&direction=descending",
