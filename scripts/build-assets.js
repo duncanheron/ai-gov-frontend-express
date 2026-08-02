@@ -49,6 +49,11 @@ copy(path.join(mojDist, "moj-frontend.min.js.map"), path.join(jsOutDir, "moj-fro
 // Static assets (fonts, images, manifest)
 const assetsOutDir = path.join(publicDir, "assets");
 fs.mkdirSync(assetsOutDir, { recursive: true });
+// MoJ first, so GOV.UK wins any filename that ever collides - the layout's crown and
+// favicons are GOV.UK's. The MoJ set is needed because its component stylesheets
+// reference icons by path (the filter's remove cross and toggle glyph), and those 404
+// with the markup looking perfectly correct.
+copy(path.join(mojDist, "assets", "images"), path.join(assetsOutDir, "images"));
 copy(path.join(govukDist, "assets", "images"), path.join(assetsOutDir, "images"));
 copy(path.join(govukDist, "assets", "fonts"), path.join(assetsOutDir, "fonts"));
 copy(path.join(govukDist, "assets", "manifest.json"), path.join(assetsOutDir, "manifest.json"));
