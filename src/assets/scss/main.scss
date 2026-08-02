@@ -44,24 +44,23 @@
   }
 }
 
+// The arrow itself is an inline SVG in the template, taking `currentColor` so it follows
+// the heading through hover and the focus yellow. This only has to sit it beside the
+// text, the way MoJ's own sortable table does on its button.
 .govuk-table__header[aria-sort] a {
+  display: inline-flex;
+  align-items: center;
+}
+
+// :not(:focus) so this cannot outrank .govuk-link:focus, which is a class plus a
+// pseudo-class and would otherwise lose to this selector's class-plus-attribute. It
+// renders the same either way today only because the inherited heading colour happens
+// to equal govuk's focus text colour; restyle the heading and the focus state would
+// break with nothing to catch it.
+.govuk-table__header[aria-sort] a:not(:focus) {
   color: inherit;
-
-  &::after {
-    content: "";
-    display: inline-block;
-    width: 0;
-    height: 0;
-    margin-left: govuk-spacing(1);
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-  }
 }
 
-.govuk-table__header[aria-sort="ascending"] a::after {
-  border-bottom: 6px solid currentcolor;
-}
-
-.govuk-table__header[aria-sort="descending"] a::after {
-  border-top: 6px solid currentcolor;
+.app-sort-indicator {
+  flex: none;
 }

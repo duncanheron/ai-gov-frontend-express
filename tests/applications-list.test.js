@@ -707,6 +707,54 @@ describe("applications list page - sorting", () => {
     },
   );
 
+  // CBLT-143. CBLT-137 drew an arrow only for the two sorted states, so on the landing
+  // page nothing marked either column as sortable and the feature was discoverable only
+  // by accident.
+  it("marks both sortable columns before anything is sorted", async () => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get("/applications");
+
+    const table = parseTable(response.text);
+    expect(heading(table, "Full name").sortIndicator).toEqual({
+      direction: "none",
+      hiddenFromAssistiveTech: true,
+      focusable: "false",
+    });
+    // The default sort is on Submitted, so it is the one column already sorted.
+    expect(heading(table, "Submitted").sortIndicator.direction).toBe("descending");
+  });
+
+  it.each([
+    ["ascending", "ascending"],
+    ["descending", "descending"],
+  ])("shows a single %s arrow on the sorted column", async (_description, direction) => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get(
+      `/applications?sort=name&direction=${direction}`,
+    );
+
+    const table = parseTable(response.text);
+    expect(heading(table, "Full name").sortIndicator.direction).toBe(direction);
+    // The other sortable column keeps the pair rather than losing its affordance.
+    expect(heading(table, "Submitted").sortIndicator.direction).toBe("none");
+  });
+
+  it("keeps the indicator decorative, leaving aria-sort to carry the meaning", async () => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get("/applications?sort=name&direction=ascending");
+
+    const table = parseTable(response.text);
+    for (const label of ["Full name", "Submitted"]) {
+      expect(heading(table, label).sortIndicator).toMatchObject({
+        hiddenFromAssistiveTech: true,
+        focusable: "false",
+      });
+    }
+  });
+
   it("leaves Reference unclickable and reporting no sort state at all (criterion 6)", async () => {
     await seedMixedCaseNames();
 
@@ -716,6 +764,8 @@ describe("applications list page - sorting", () => {
     expect(reference.href).toBeNull();
     // Null, not "none": a column that cannot be sorted makes no sort claim.
     expect(reference.ariaSort).toBeNull();
+    // And no arrow, or it would look sortable while doing nothing (CBLT-143).
+    expect(reference.sortIndicator).toBeNull();
   });
 
   it.each([

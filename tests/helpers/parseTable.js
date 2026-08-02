@@ -23,10 +23,21 @@ function parseTable(html, selector = "table") {
     sortModule: table.getAttribute("data-module"),
     headings: [...table.querySelectorAll("thead th")].map((cell) => {
       const link = cell.querySelector("a");
+      const indicator = cell.querySelector(".app-sort-indicator");
       return {
         text: cell.textContent.trim(),
         href: link ? link.getAttribute("href") : null,
         ariaSort: cell.getAttribute("aria-sort"),
+        // The visible arrow. `direction` is what it depicts, which is not the same
+        // claim as `ariaSort` - the pair shown on an unsorted column has to be
+        // announced as "none", and a column with no indicator makes no claim at all.
+        sortIndicator: indicator && {
+          direction: [...indicator.classList]
+            .map((name) => name.replace("app-sort-indicator--", ""))
+            .find((name) => ["ascending", "descending", "none"].includes(name)),
+          hiddenFromAssistiveTech: indicator.getAttribute("aria-hidden") === "true",
+          focusable: indicator.getAttribute("focusable"),
+        },
       };
     }),
     rows: [...table.querySelectorAll("tbody tr")].map((row) =>
