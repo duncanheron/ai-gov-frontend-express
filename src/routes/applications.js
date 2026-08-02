@@ -92,6 +92,12 @@ router.get("/", async (req, res) => {
         }
       : undefined,
     clearSearchHref: applicationsQuery.buildUrl(current, { name: "" }),
+    // Null while the default order is showing, so the forms carry no redundant
+    // fields and a plain search still lands on /applications?name=…
+    activeOrder:
+      sort === applicationsQuery.DEFAULT_SORT && direction === applicationsQuery.DEFAULT_DIRECTION
+        ? null
+        : { sort, direction },
     // The search box and filter panel are pointless with nothing to search, but stay on
     // screen while either is applied so the caseworker can change or clear them. An empty
     // database with a term is therefore the no-matches state, not "no applications yet".

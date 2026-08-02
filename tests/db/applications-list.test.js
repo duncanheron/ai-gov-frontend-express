@@ -230,3 +230,93 @@ describe("applications data module - list({ services })", () => {
     expect(await applications.list()).toHaveLength(5);
   });
 });
+
+describe("applications data module - list({ sort, direction })", () => {
+  const names = (found) => found.map((application) => application.full_name);
+
+  // Case is what makes this worth seeding: ordering on the raw column puts every
+  // capital before every lower-case letter, so "alice" would land after "Zoe".
+  async function seedMixedCaseNames() {
+    await createApplication({
+      fullName: "Zoe Zhang",
+      submittedAt: new Date("2026-01-01T09:00:00.000Z"),
+    });
+    await createApplication({
+      fullName: "alice Adams",
+      submittedAt: new Date("2026-01-02T09:00:00.000Z"),
+    });
+    await createApplication({
+      fullName: "Alan Turing",
+      submittedAt: new Date("2026-01-03T09:00:00.000Z"),
+    });
+  }
+
+  it("orders names A-Z, keeping mixed case together (criterion 3)", async () => {
+    await seedMixedCaseNames();
+
+    const found = await applications.list({ sort: "name", direction: "ascending" });
+
+    expect(names(found)).toEqual(["Alan Turing", "alice Adams", "Zoe Zhang"]);
+  });
+
+  it("orders names Z-A, keeping mixed case together (criteria 1 and 3)", async () => {
+    await seedMixedCaseNames();
+
+    const found = await applications.list({ sort: "name", direction: "descending" });
+
+    expect(names(found)).toEqual(["Zoe Zhang", "alice Adams", "Alan Turing"]);
+  });
+
+  it("orders by date submitted, oldest or newest first (criterion 2)", async () => {
+    await seedMixedCaseNames();
+
+    const oldest = await applications.list({ sort: "submitted", direction: "ascending" });
+    const newest = await applications.list({ sort: "submitted", direction: "descending" });
+
+    expect(names(oldest)).toEqual(["Zoe Zhang", "alice Adams", "Alan Turing"]);
+    expect(names(newest)).toEqual(["Alan Turing", "alice Adams", "Zoe Zhang"]);
+  });
+
+  it("defaults to newest submitted first when no order is asked for (criterion 8)", async () => {
+    await seedMixedCaseNames();
+
+    expect(names(await applications.list())).toEqual(["Alan Turing", "alice Adams", "Zoe Zhang"]);
+  });
+
+  it.each([
+    ["a column that does not exist", { sort: "not-a-column" }],
+    ["a real column that is not offered", { sort: "email" }],
+    ["a key inherited from Object.prototype", { sort: "constructor" }],
+    ["a raw SQL fragment", { sort: "full_name; DROP TABLE applications" }],
+    ["a direction that is not one", { sort: "name", direction: "sideways" }],
+  ])("falls back to a working order for %s (criterion 7)", async (_description, order) => {
+    await seedMixedCaseNames();
+
+    const found = await applications.list(order);
+
+    expect(found).toHaveLength(3);
+    expect(await applications.list()).toHaveLength(3);
+  });
+
+  // The `, id ASC` tiebreaker in every ORDER BY is deliberately not asserted here.
+  // Its symptom - a row on two pages or none - only appears under LIMIT/OFFSET, and
+  // predicting the tied order needs JS to agree with the database's text collation,
+  // which is exactly the locale dependency the LOWER() above exists to avoid.
+  // CBLT-138 owns the test, as its ticket says.
+
+  it("sorts within a search and a service filter rather than replacing them", async () => {
+    await createApplication({ fullName: "Grace Zhang", flow: "housing" });
+    await createApplication({ fullName: "grace Adams", flow: "housing" });
+    await createApplication({ fullName: "Grace Baker", flow: "council-tax" });
+    await createApplication({ fullName: "Alan Turing", flow: "housing" });
+
+    const found = await applications.list({
+      name: "grace",
+      services: ["housing"],
+      sort: "name",
+      direction: "ascending",
+    });
+
+    expect(names(found)).toEqual(["grace Adams", "Grace Zhang"]);
+  });
+});

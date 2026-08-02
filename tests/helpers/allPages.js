@@ -250,6 +250,14 @@ function buildAllPages(getServer) {
       },
     },
     {
+      name: "applications list page (sorted by name)",
+      get: async () => {
+        const agent = freshAgent();
+        await reachApplyConfirmation(agent);
+        return agent.get("/applications?sort=name&direction=ascending");
+      },
+    },
+    {
       name: "applications list page (service filter with no matches)",
       get: async () => {
         const agent = freshAgent();

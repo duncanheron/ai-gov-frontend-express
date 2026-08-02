@@ -19,10 +19,15 @@
          composed rather than reverting to the macro. #}
       <div class="moj-search">
         <form action="/applications" method="get">
-          {# Each form carries the other's state, so applying one cannot discard the other. #}
+          {# Each form carries every other control's state, so using one cannot
+             discard the others. #}
           {% for service in selectedServices %}
             <input type="hidden" name="service" value="{{ service }}">
           {% endfor %}
+          {% if activeOrder %}
+            <input type="hidden" name="sort" value="{{ activeOrder.sort }}">
+            <input type="hidden" name="direction" value="{{ activeOrder.direction }}">
+          {% endif %}
 
           {{ govukInput({
             classes: "moj-search__input",
@@ -58,6 +63,10 @@
       <form action="/applications" method="get" class="govuk-!-margin-bottom-6">
         {% if searchName %}
           <input type="hidden" name="name" value="{{ searchName }}">
+        {% endif %}
+        {% if activeOrder %}
+          <input type="hidden" name="sort" value="{{ activeOrder.sort }}">
+          <input type="hidden" name="direction" value="{{ activeOrder.direction }}">
         {% endif %}
 
         {# mojFilter puts `optionsHtml` through `| safe`. Sound here, and only because of
