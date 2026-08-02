@@ -37,15 +37,12 @@ describe("MoJ Frontend styles", () => {
     [".moj-filter__tag"],
     [".moj-action-bar__filter"],
     [".moj-js-hidden"],
-  ])(
-    "serves the %s styles in the compiled stylesheet",
-    async (selector) => {
-      const response = await request(getServer()).get("/stylesheets/main.css");
+  ])("serves the %s styles in the compiled stylesheet", async (selector) => {
+    const response = await request(getServer()).get("/stylesheets/main.css");
 
-      expect(response.status).toBe(200);
-      expect(response.text).toContain(selector);
-    },
-  );
+    expect(response.status).toBe(200);
+    expect(response.text).toContain(selector);
+  });
 
   // Criterion 5 of CBLT-137 needs the active sort visible, not only announced. MoJ's
   // rules target `[aria-sort] button` and their arrows come from a script that does not
@@ -158,7 +155,9 @@ describe("applications list filter toggle", () => {
     const response = await request(getServer()).get("/applications?service=housing");
 
     expect(parseFilter(response.text)).toEqual({
-      // FilterToggleButton.moduleName - this is what initAll matches on.
+      // FilterToggleButton.moduleName. The page constructs the component directly
+      // rather than through initAll, which omits this component from its list, but the
+      // attribute is still what ConfigurableComponent reads its config from.
       module: "moj-filter",
       // The default is `true`, and it is applied *after* the media-query check rather
       // than as its starting point, so leaving it would collapse the panel on desktop
