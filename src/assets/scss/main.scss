@@ -28,8 +28,15 @@
 // column beside the results, where layout alone relates the two; stacked full width, a
 // gap leaves the button looking like it belongs to the search box above it. A GOV.UK
 // button carries a bottom margin, so closing that is what makes them read as one unit.
-.app-filter-toggle .govuk-button {
-  margin-bottom: 0;
+.app-filter-toggle {
+  // The secondary button draws a 2px box-shadow below its own box. With the margin
+  // closed that shadow would meet the panel with nothing between them, so leave
+  // exactly its depth and no more.
+  padding-bottom: 2px;
+
+  .govuk-button {
+    margin-bottom: 0;
+  }
 }
 
 .govuk-table__header[aria-sort] a {

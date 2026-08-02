@@ -83,7 +83,9 @@
         }) }}
       {% endset %}
 
-      <form action="/applications" method="get" class="govuk-!-margin-bottom-6">
+      {# The top margin separates the toggle from the search box above it, so the two
+         controls do not read as one group. #}
+      <form action="/applications" method="get" class="govuk-!-margin-top-4 govuk-!-margin-bottom-6">
         {% if searchName %}
           <input type="hidden" name="name" value="{{ searchName }}">
         {% endif %}
