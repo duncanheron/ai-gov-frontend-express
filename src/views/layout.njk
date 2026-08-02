@@ -48,5 +48,9 @@
       import { initAll } from '/javascripts/govuk-frontend.min.js'
       initAll()
     </script>
+
+    {# Empty on citizen journeys, so their payload stays exactly as it was. Caseworker
+       pages fill it with MoJ's bundle - see CLAUDE.md on the two design systems. #}
+    {% block pageScripts %}{% endblock %}
   </body>
 </html>

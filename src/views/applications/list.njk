@@ -7,6 +7,18 @@
 
 {% block pageTitle %}Applications{% endblock %}
 
+{# Caseworker-only. MoJ's bundle inlines its own copy of GOV.UK Frontend, so this runs
+   alongside the layout's initAll rather than replacing it - MoJ's does not initialise
+   GOV.UK components, and the header and service navigation would stop working. The two
+   touch disjoint component sets, so nothing initialises twice. #}
+{% block pageScripts %}
+  <script type="module" nonce="{{ cspNonce }}" src="/javascripts/moj-frontend.min.js"></script>
+  <script type="module" nonce="{{ cspNonce }}">
+    import { initAll } from '/javascripts/moj-frontend.min.js'
+    initAll()
+  </script>
+{% endblock %}
+
 {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
@@ -60,6 +72,12 @@
         }) }}
       {% endset %}
 
+      {# The toggle button is created by MoJ's JavaScript and appended here. Empty
+         without scripting, which is why the panel below is never hidden server-side. #}
+      <div class="moj-action-bar">
+        <div class="moj-action-bar__filter"></div>
+      </div>
+
       <form action="/applications" method="get" class="govuk-!-margin-bottom-6">
         {% if searchName %}
           <input type="hidden" name="name" value="{{ searchName }}">
@@ -72,11 +90,16 @@
         {# mojFilter puts `optionsHtml` through `| safe`. Sound here, and only because of
            what this block is: one macro call over the server-defined service list, with
            no request data reaching it. The checkbox labels and values are ours. #}
+        {# data-start-hidden="false" is load-bearing. The component defaults it to true
+           and applies it *after* its media-query check rather than as the starting
+           point, so the default collapses the panel on desktop too. False lets the
+           media query decide: collapsed on narrow, open on wide. #}
         {{ mojFilter({
           heading: { text: "Filter" },
           selectedFilters: selectedFilters,
           submit: { text: "Apply filters" },
-          optionsHtml: serviceOptionsHtml
+          optionsHtml: serviceOptionsHtml,
+          attributes: { "data-start-hidden": "false" }
         }) }}
       </form>
     {% endif %}
