@@ -20,10 +20,21 @@ const flowAnswerLabels = {
 
 const serviceListFormat = new Intl.ListFormat("en-GB", { style: "long", type: "conjunction" });
 
+// A sortable heading carries its own link and the sort state a screen reader
+// announces. `Reference` gets neither, so it renders as plain text.
+function sortableHeading(current, key) {
+  const { label } = applicationsQuery.SORTS.find((sort) => sort.key === key);
+  return {
+    text: label,
+    href: applicationsQuery.sortUrl(current, key),
+    ariaSort: current.sort === key ? current.direction : "none",
+  };
+}
+
 router.get("/", async (req, res) => {
   const current = applicationsQuery.parse(req.query);
-  const { name, services } = current;
-  const matching = await applications.list({ name, services });
+  const { name, services, sort, direction } = current;
+  const matching = await applications.list({ name, services, sort, direction });
 
   // Both the caption and the no-matches message have to name the filter, or a partial
   // list reads as the whole one. They share this clause so they cannot describe
@@ -49,6 +60,11 @@ router.get("/", async (req, res) => {
       submittedFormatted: formatDate(application.submitted_at),
     })),
     tableCaption,
+    tableHead: [
+      sortableHeading(current, "name"),
+      { text: "Reference" },
+      sortableHeading(current, "submitted"),
+    ],
     noMatchesMessage: name
       ? `No applications match “${name}”${inServices}.`
       : `No applications${inServices}.`,
