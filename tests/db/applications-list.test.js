@@ -148,3 +148,85 @@ describe("applications data module - list({ name })", () => {
     ]);
   });
 });
+
+describe("applications data module - list({ services })", () => {
+  const FLOWS = [
+    "standard",
+    "housing",
+    "housing-benefit-disability",
+    "council-tax",
+    "garden-waste",
+  ];
+
+  // One application per flow, so a filter that quietly matched everything and one that
+  // matched the right single row are distinguishable for every service.
+  async function seedOnePerService() {
+    const seeded = {};
+    for (const [index, flow] of FLOWS.entries()) {
+      seeded[flow] = await createApplication({
+        flow,
+        fullName: `Applicant ${flow}`,
+        submittedAt: new Date(`2026-01-0${index + 1}T09:00:00.000Z`),
+      });
+    }
+    return seeded;
+  }
+
+  const references = (found) => found.map((application) => application.reference);
+
+  it.each(FLOWS)(
+    "returns only the applications whose flow is %s (criteria 1 and 2)",
+    async (flow) => {
+      const seeded = await seedOnePerService();
+
+      const found = await applications.list({ services: [flow] });
+
+      expect(references(found)).toEqual([seeded[flow].reference]);
+    },
+  );
+
+  it("returns both selected services and nothing else, newest first (criterion 1)", async () => {
+    const seeded = await seedOnePerService();
+
+    const found = await applications.list({ services: ["housing", "council-tax"] });
+
+    expect(references(found)).toEqual([seeded["council-tax"].reference, seeded.housing.reference]);
+  });
+
+  it.each([[[]], [undefined]])("treats %j as no service filter", async (services) => {
+    await seedOnePerService();
+
+    const found = await applications.list({ services });
+
+    expect(found).toHaveLength(5);
+  });
+
+  it("narrows by name and service together rather than either alone (criterion 3)", async () => {
+    const wanted = await createApplication({ fullName: "Grace Hopper", flow: "housing" });
+    await createApplication({ fullName: "Grace Hopper", flow: "council-tax" });
+    await createApplication({ fullName: "Alan Turing", flow: "housing" });
+
+    const found = await applications.list({ name: "grace", services: ["housing"] });
+
+    expect(references(found)).toEqual([wanted.reference]);
+  });
+
+  it("matches nothing for a service value no application holds", async () => {
+    await seedOnePerService();
+
+    const found = await applications.list({ services: ["not-a-service"] });
+
+    expect(found).toEqual([]);
+  });
+
+  it("binds the service list as a parameter rather than splicing it into the query", async () => {
+    await seedOnePerService();
+
+    const found = await applications.list({
+      services: ["housing') OR true --", "x'); DROP TABLE applications; --"],
+    });
+    expect(found).toEqual([]);
+
+    expect(await applications.list()).toHaveLength(5);
+  });
+});

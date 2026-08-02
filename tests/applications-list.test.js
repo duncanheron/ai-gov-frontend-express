@@ -9,17 +9,26 @@ const { useSharedServer } = require("./helpers/testServer");
 
 const getServer = useSharedServer();
 
-// Reads the parts of the page that are not the table: the search box (as its
-// rendered attributes, not the raw markup) and the messages inside <main>, so a
-// test can tell "no matches" from "no applications yet". `search` is null when the
-// page renders no search box, and `elementCount` supports asserting that a search
-// term added no element of its own.
+const hiddenValues = (form, name) =>
+  [...form.querySelectorAll(`input[type='hidden'][name='${name}']`)].map((input) =>
+    input.getAttribute("value"),
+  );
+
+// Reads the parts of the page that are not the table: the search box and filter panel
+// (as their rendered attributes, not the raw markup) and the messages inside <main>, so
+// a test can tell "no matches" from "no applications yet". `search` and `filter` are
+// null when the page renders neither, and `elementCount` supports asserting that a
+// search term added no element of its own.
 function parseListPage(html) {
   const dom = new JSDOM(html);
   const { document } = dom.window;
   const input = document.querySelector(".moj-search input[name='name']");
   const form = input && input.closest("form");
-  const clear = document.querySelector('.moj-search a[href="/applications"]');
+  const clear = document.querySelector(".moj-search a.govuk-link");
+  const filter = document.querySelector(".moj-filter");
+  const filterForm = filter && filter.closest("form");
+  const selected = filter && filter.querySelector(".moj-filter__selected");
+  const selectedClear = selected && selected.querySelector("a");
 
   const parsed = {
     search: input && {
@@ -33,13 +42,44 @@ function parseListPage(html) {
       method: form.getAttribute("method"),
       buttonText: form.querySelector("button").textContent.trim(),
     },
+    // What each form would submit on the other's behalf. The filter survives a search,
+    // and the search survives a filter, only if these are here.
+    searchCarriesServices: form && hiddenValues(form, "service"),
     clearLink: clear && { text: clear.textContent.trim(), href: clear.getAttribute("href") },
-    // Status messages only - the search box has a paragraph of its own, and a test
-    // distinguishing "no matches" from "no applications yet" must not see it.
+    filter: filter && {
+      action: filterForm.getAttribute("action"),
+      method: filterForm.getAttribute("method"),
+      carriesSearch: hiddenValues(filterForm, "name"),
+      submitText: filter.querySelector(".moj-filter__options button").textContent.trim(),
+      checkboxes: [...filter.querySelectorAll("input[type='checkbox'][name='service']")].map(
+        (box) => ({
+          value: box.getAttribute("value"),
+          label: document.querySelector(`label[for="${box.id}"]`).textContent.trim(),
+          checked: box.hasAttribute("checked"),
+        }),
+      ),
+      selectedFilters: selected && {
+        clearLink: {
+          text: selectedClear.textContent.trim(),
+          href: selectedClear.getAttribute("href"),
+        },
+        tags: [...selected.querySelectorAll(".moj-filter__tag")].map((tag) => ({
+          // The component prefixes every tag with visually hidden link text.
+          text: tag.textContent.replace("Remove this filter", "").trim(),
+          href: tag.getAttribute("href"),
+        })),
+      },
+    },
+    // Status messages only - the search box and the filter panel each have paragraphs of
+    // their own, and a test distinguishing "no matches" from "no applications yet" must
+    // not see them.
     messages: [...document.querySelectorAll("main p")]
-      .filter((p) => !p.closest(".moj-search"))
+      .filter((p) => !p.closest(".moj-search") && !p.closest(".moj-filter"))
       .map((p) => p.textContent.trim()),
     scripts: [...document.querySelectorAll("script")].map((script) => script.textContent),
+    scriptSources: [...document.querySelectorAll("script[src]")].map((script) =>
+      script.getAttribute("src"),
+    ),
     elementCount: document.querySelectorAll("*").length,
   };
 
@@ -314,5 +354,241 @@ describe("applications list page", () => {
     expect(response.status).toBe(200);
     expect(parseTable(response.text)).toBeNull();
     expect(await applications.list()).toHaveLength(3);
+  });
+});
+
+// One applicant per service, each named after its service, so a filter that quietly
+// matched everything reads differently from one that matched the right single row.
+const SERVICE_APPLICANTS = [
+  ["standard", "Standard Applicant", "General application"],
+  ["housing", "Housing Applicant", "Housing"],
+  ["housing-benefit-disability", "Benefit Applicant", "Housing Benefit (disability)"],
+  ["council-tax", "Council Tax Applicant", "Council tax"],
+  ["garden-waste", "Garden Waste Applicant", "Garden waste"],
+];
+
+async function seedOnePerService() {
+  for (const [index, [flow, fullName]] of SERVICE_APPLICANTS.entries()) {
+    await createApplication({
+      flow,
+      fullName,
+      submittedAt: new Date(`2026-01-0${index + 1}T09:00:00.000Z`),
+    });
+  }
+}
+
+describe("applications list page - service filter", () => {
+  beforeEach(async () => {
+    await truncateAllTables();
+  });
+
+  it.each(SERVICE_APPLICANTS)(
+    "shows only the %s applications when that service is selected (criteria 1 and 2)",
+    async (service, applicantName) => {
+      await seedOnePerService();
+
+      const response = await request(getServer()).get(`/applications?service=${service}`);
+
+      expect(response.status).toBe(200);
+      expect(names(parseTable(response.text))).toEqual([applicantName]);
+    },
+  );
+
+  it("shows both selected services and nothing else (criterion 1)", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(
+      "/applications?service=housing&service=council-tax",
+    );
+
+    expect(names(parseTable(response.text))).toEqual([
+      "Council Tax Applicant",
+      "Housing Applicant",
+    ]);
+  });
+
+  it("offers every service as a checkbox, ticking back the ones that are applied (criterion 4)", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(
+      "/applications?service=housing&service=council-tax",
+    );
+
+    expect(parseListPage(response.text).filter.checkboxes).toEqual(
+      SERVICE_APPLICANTS.map(([value, , label]) => ({
+        value,
+        label,
+        checked: value === "housing" || value === "council-tax",
+      })),
+    );
+  });
+
+  it("keeps a name search when a filter is applied, and narrows rather than resets (criterion 3)", async () => {
+    await seedOnePerService();
+
+    const searched = await request(getServer()).get("/applications?name=applicant");
+    // The filter form submits this alongside the boxes, so applying a filter cannot
+    // discard the term the caseworker already typed.
+    expect(parseListPage(searched.text).filter.carriesSearch).toEqual(["applicant"]);
+
+    const filtered = await request(getServer()).get("/applications?name=applicant&service=housing");
+    expect(names(parseTable(filtered.text))).toEqual(["Housing Applicant"]);
+    expect(parseListPage(filtered.text).search).toMatchObject({ value: "applicant" });
+  });
+
+  it("keeps the selected services when a search is run from a filtered list (criterion 3)", async () => {
+    await seedOnePerService();
+
+    const filtered = await request(getServer()).get(
+      "/applications?service=housing&service=council-tax",
+    );
+
+    expect(parseListPage(filtered.text).searchCarriesServices).toEqual(["housing", "council-tax"]);
+  });
+
+  it("shows a removable tag per selected service, keeping the others and the search (criterion 5)", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(
+      "/applications?name=applicant&service=housing&service=council-tax",
+    );
+
+    const { tags } = parseListPage(response.text).filter.selectedFilters;
+    expect(tags).toEqual([
+      { text: "Housing", href: "/applications?name=applicant&service=council-tax" },
+      { text: "Council tax", href: "/applications?name=applicant&service=housing" },
+    ]);
+
+    const housingRemoved = await request(getServer()).get(tags[0].href);
+    expect(housingRemoved.status).toBe(200);
+    expect(names(parseTable(housingRemoved.text))).toEqual(["Council Tax Applicant"]);
+    expect(parseListPage(housingRemoved.text).search).toMatchObject({ value: "applicant" });
+  });
+
+  it("clears the services and the search term through the clear link (criterion 6)", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get("/applications?name=applicant&service=housing");
+    const { clearLink } = parseListPage(response.text).filter.selectedFilters;
+    expect(clearLink).toEqual({ text: "Clear filters", href: "/applications" });
+
+    const cleared = await request(getServer()).get(clearLink.href);
+    expect(cleared.status).toBe(200);
+    expect(names(parseTable(cleared.text))).toHaveLength(5);
+    const page = parseListPage(cleared.text);
+    expect(page.filter.selectedFilters).toBeNull();
+    expect(page.search).toMatchObject({ value: "" });
+  });
+
+  it("clears only the search, keeping the services, through the search's own clear link", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get("/applications?name=applicant&service=housing");
+    expect(parseListPage(response.text).clearLink).toEqual({
+      text: "Clear search",
+      href: "/applications?service=housing",
+    });
+
+    const cleared = await request(getServer()).get("/applications?service=housing");
+    expect(names(parseTable(cleared.text))).toEqual(["Housing Applicant"]);
+  });
+
+  it("shows no selected-filter block, and the full list, with nothing selected (criterion 7)", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get("/applications");
+
+    const page = parseListPage(response.text);
+    expect(page.filter.selectedFilters).toBeNull();
+    expect(page.filter.checkboxes.every((box) => box.checked)).toBe(false);
+    expect(page.messages).toEqual([]);
+    expect(names(parseTable(response.text))).toHaveLength(5);
+  });
+
+  it("shows no filter panel at all when there is nothing to filter", async () => {
+    const response = await request(getServer()).get("/applications");
+
+    expect(parseListPage(response.text).filter).toBeNull();
+  });
+
+  it.each([
+    ["a service that does not exist", "?service=not-a-service"],
+    ["an empty service", "?service="],
+    ["a service given as a nested parameter", "?service[flow]=housing"],
+  ])("shows the full list, not an error, for %s (criterion 8)", async (_description, query) => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(`/applications${query}`);
+
+    expect(response.status).toBe(200);
+    expect(names(parseTable(response.text))).toHaveLength(5);
+    expect(parseListPage(response.text).filter.selectedFilters).toBeNull();
+  });
+
+  it("keeps the real service and drops the invented one from a hand-edited URL (criterion 8)", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(
+      "/applications?service=housing&service=not-a-service",
+    );
+
+    expect(names(parseTable(response.text))).toEqual(["Housing Applicant"]);
+    expect(parseListPage(response.text).filter.selectedFilters.tags).toEqual([
+      { text: "Housing", href: "/applications" },
+    ]);
+  });
+
+  it("treats a service repeated in a hand-edited URL as selected once", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(
+      "/applications?service=housing&service=housing",
+    );
+
+    expect(names(parseTable(response.text))).toEqual(["Housing Applicant"]);
+    expect(parseListPage(response.text).filter.selectedFilters.tags).toEqual([
+      { text: "Housing", href: "/applications" },
+    ]);
+  });
+
+  it("keeps the panel on screen, and names the filter, when nothing matches", async () => {
+    await createApplication({ fullName: "Housing Applicant", flow: "housing" });
+
+    const response = await request(getServer()).get("/applications?service=garden-waste");
+
+    expect(response.status).toBe(200);
+    expect(parseTable(response.text)).toBeNull();
+    const page = parseListPage(response.text);
+    expect(page.messages).toEqual(["No applications in Garden waste."]);
+    // Without the panel the caseworker would have no way back out of the filter.
+    expect(page.filter.selectedFilters.tags).toHaveLength(1);
+  });
+
+  it("names both the search term and the services in the caption, so it never claims to list everything", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get(
+      "/applications?name=applicant&service=housing&service=council-tax",
+    );
+
+    expect(parseTable(response.text).caption).toBe(
+      "Applications matching “applicant” in Housing and Council tax",
+    );
+  });
+
+  it("drives the whole panel through plain GET requests, adding no script of its own (criterion 9)", async () => {
+    await seedOnePerService();
+
+    const response = await request(getServer()).get("/applications?service=housing");
+
+    const page = parseListPage(response.text);
+    expect(page.filter).toMatchObject({
+      action: "/applications",
+      method: "get",
+      submitText: "Apply filters",
+    });
+    // MoJ's filter component ships JavaScript that collapses the panel (CBLT-139). Until
+    // that lands the panel must need none, so nothing here may depend on a script.
+    expect(page.scriptSources).toEqual(["/javascripts/govuk-frontend.min.js"]);
   });
 });

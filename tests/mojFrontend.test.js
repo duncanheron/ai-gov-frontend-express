@@ -34,12 +34,17 @@ describe("MoJ Frontend", () => {
     dom.window.close();
   });
 
-  it("serves the MoJ component styles in the compiled stylesheet", async () => {
-    const response = await request(getServer()).get("/stylesheets/main.css");
+  // Each component is imported separately, so a missing @use costs that component its
+  // styling alone - the page still renders, and every other test still passes.
+  it.each([[".moj-search"], [".moj-filter"], [".moj-filter__tag"]])(
+    "serves the %s styles in the compiled stylesheet",
+    async (selector) => {
+      const response = await request(getServer()).get("/stylesheets/main.css");
 
-    expect(response.status).toBe(200);
-    expect(response.text).toContain(".moj-search");
-  });
+      expect(response.status).toBe(200);
+      expect(response.text).toContain(selector);
+    },
+  );
 
   // Layout cannot be asserted in JSDOM, which computes no cascade and no box model.
   // What broke the button's alignment was source order between two equal-specificity

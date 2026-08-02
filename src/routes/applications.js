@@ -18,22 +18,68 @@ const flowAnswerLabels = {
   "garden-waste": "Garden waste payment",
 };
 
+const serviceListFormat = new Intl.ListFormat("en-GB", { style: "long", type: "conjunction" });
+
 router.get("/", async (req, res) => {
-  const { name } = applicationsQuery.parse(req.query);
-  const matching = await applications.list({ name });
+  const current = applicationsQuery.parse(req.query);
+  const { name, services } = current;
+  const matching = await applications.list({ name, services });
+
+  // Both the caption and the no-matches message have to name the filter, or a partial
+  // list reads as the whole one. They share this clause so they cannot describe
+  // different filters.
+  const inServices = services.length
+    ? ` in ${serviceListFormat.format(services.map(applicationsQuery.serviceLabel))}`
+    : "";
+  const selected = new Set(services);
+
+  let tableCaption = "All applications";
+  if (name) {
+    tableCaption = `Applications matching “${name}”${inServices}`;
+  } else if (inServices) {
+    tableCaption = `Applications${inServices}`;
+  }
 
   res.render("applications/list.njk", {
     searchName: name,
+    selectedServices: services,
     applications: matching.map((application) => ({
       fullName: application.full_name,
       reference: application.reference,
       submittedFormatted: formatDate(application.submitted_at),
     })),
-    tableCaption: name ? `Applications matching “${name}”` : "All applications",
-    // A search box is pointless with nothing to search, but stays on screen while a
-    // search is applied so the caseworker can change or clear it. An empty database
-    // with a term is therefore the no-matches state, not "no applications yet".
-    showSearch: Boolean(name) || matching.length > 0,
+    tableCaption,
+    noMatchesMessage: name
+      ? `No applications match “${name}”${inServices}.`
+      : `No applications${inServices}.`,
+    serviceCheckboxes: applicationsQuery.SERVICES.map(({ value, label }) => ({
+      value,
+      text: label,
+      checked: selected.has(value),
+    })),
+    // Undefined rather than empty so mojFilter renders no selected-filter block at all.
+    selectedFilters: services.length
+      ? {
+          heading: { text: "Selected filters" },
+          clearLink: { text: "Clear filters", href: applicationsQuery.buildUrl() },
+          categories: [
+            {
+              heading: { text: "Service" },
+              items: services.map((value) => ({
+                text: applicationsQuery.serviceLabel(value),
+                href: applicationsQuery.buildUrl(current, {
+                  services: services.filter((other) => other !== value),
+                }),
+              })),
+            },
+          ],
+        }
+      : undefined,
+    clearSearchHref: applicationsQuery.buildUrl(current, { name: "" }),
+    // The search box and filter panel are pointless with nothing to search, but stay on
+    // screen while either is applied so the caseworker can change or clear them. An empty
+    // database with a term is therefore the no-matches state, not "no applications yet".
+    showControls: Boolean(name) || services.length > 0 || matching.length > 0,
     maxNameLength: applicationsQuery.MAX_NAME_LENGTH,
   });
 });

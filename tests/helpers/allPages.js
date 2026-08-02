@@ -242,6 +242,22 @@ function buildAllPages(getServer) {
       },
     },
     {
+      name: "applications list page (service filter applied)",
+      get: async () => {
+        const agent = freshAgent();
+        await reachApplyConfirmation(agent);
+        return agent.get("/applications?service=standard");
+      },
+    },
+    {
+      name: "applications list page (service filter with no matches)",
+      get: async () => {
+        const agent = freshAgent();
+        await reachApplyConfirmation(agent);
+        return agent.get("/applications?name=Ada&service=garden-waste");
+      },
+    },
+    {
       name: "application detail page",
       get: async () => {
         const agent = freshAgent();

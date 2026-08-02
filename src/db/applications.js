@@ -57,18 +57,27 @@ function escapeLikeWildcards(value) {
   return value.replace(/[\\%_]/g, (character) => LIKE_WILDCARDS[character]);
 }
 
-async function list({ name } = {}) {
+async function list({ name, services } = {}) {
   const trimmedName = typeof name === "string" ? name.trim() : "";
+  const conditions = [];
+  const params = [];
 
-  if (!trimmedName) {
-    const result = await pool.query("SELECT * FROM applications ORDER BY submitted_at DESC");
-    return result.rows;
+  if (trimmedName) {
+    params.push(`%${escapeLikeWildcards(trimmedName)}%`);
+    conditions.push(`full_name ILIKE $${params.length} ESCAPE '\\'`);
   }
 
-  const pattern = `%${escapeLikeWildcards(trimmedName)}%`;
+  // = ANY($n) takes the whole selection as one bound array parameter, so a service value
+  // is never spliced into an IN list. No services selected means no service filter.
+  if (Array.isArray(services) && services.length > 0) {
+    params.push(services);
+    conditions.push(`flow = ANY($${params.length})`);
+  }
+
+  const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
   const result = await pool.query(
-    "SELECT * FROM applications WHERE full_name ILIKE $1 ESCAPE '\\' ORDER BY submitted_at DESC",
-    [pattern],
+    `SELECT * FROM applications${where} ORDER BY submitted_at DESC`,
+    params,
   );
   return result.rows;
 }
