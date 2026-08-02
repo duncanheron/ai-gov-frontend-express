@@ -41,19 +41,20 @@ describe("MoJ Frontend styles", () => {
     },
   );
 
-  // Criterion 5 of CBLT-137 needs the active sort visible, not only announced. MoJ's
-  // rules target `[aria-sort] button` and their arrows come from a script that does not
-  // drive our headings, so these rules are ours alone, and a page stripped of them
-  // still renders and still passes every other test.
-  // Unquoted: the minifier drops the quotes the source writes.
-  it.each([["[aria-sort=ascending]"], ["[aria-sort=descending]"]])(
-    "styles the %s column so the sort is visible, not only announced",
-    async (selector) => {
-      const response = await request(getServer()).get("/stylesheets/main.css");
+  // CBLT-137 drew the sort arrows as CSS pseudo-elements; CBLT-143 moved them into the
+  // template as MoJ's own SVG, so that an unsorted column can show the up-and-down pair
+  // too. Which arrow each column shows is now asserted against the DOM in
+  // tests/applications-list.test.js - a stronger claim than a selector being present.
+  // What the stylesheet still owns is sitting that arrow beside the heading text
+  // instead of on the text baseline, which MoJ does the same way on its own button.
+  it("lays a sortable heading out so its arrow sits beside the text", async () => {
+    const response = await request(getServer()).get("/stylesheets/main.css");
 
-      expect(response.text).toContain(selector);
-    },
-  );
+    expect(response.text).toMatch(
+      /\.govuk-table__header\[aria-sort\] a\{[^}]*display:inline-flex[^}]*align-items:center/,
+    );
+    expect(response.text).toContain(".app-sort-indicator");
+  });
 
   // Layout cannot be asserted in JSDOM, which computes no cascade and no box model.
   // What broke the button's alignment was source order between two equal-specificity
