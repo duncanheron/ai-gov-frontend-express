@@ -15,3 +15,29 @@
 .moj-search__button {
   margin-bottom: 0;
 }
+
+// MoJ's sortable-table styling hangs off `[aria-sort] button` and the arrows are
+// injected by the script we deliberately do not load, so a server-sorted heading
+// link inherits neither. This is the smallest thing that makes the active sort
+// visible as well as announced (criterion 5 of CBLT-137).
+.govuk-table__header[aria-sort] a {
+  color: inherit;
+
+  &::after {
+    content: "";
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: govuk-spacing(1);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+  }
+}
+
+.govuk-table__header[aria-sort="ascending"] a::after {
+  border-bottom: 6px solid currentcolor;
+}
+
+.govuk-table__header[aria-sort="descending"] a::after {
+  border-top: 6px solid currentcolor;
+}

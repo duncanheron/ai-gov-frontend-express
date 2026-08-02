@@ -17,7 +17,18 @@ function parseTable(html, selector = "table") {
   const caption = table.querySelector("caption");
   const parsed = {
     caption: caption ? caption.textContent.trim() : null,
-    headings: [...table.querySelectorAll("thead th")].map((cell) => cell.textContent.trim()),
+    // `sortModule` is the client-side sorting this table must not be wired to, and
+    // `ariaSort` is null rather than "none" only when the attribute is absent
+    // altogether - the two are different claims about a column.
+    sortModule: table.getAttribute("data-module"),
+    headings: [...table.querySelectorAll("thead th")].map((cell) => {
+      const link = cell.querySelector("a");
+      return {
+        text: cell.textContent.trim(),
+        href: link ? link.getAttribute("href") : null,
+        ariaSort: cell.getAttribute("aria-sort"),
+      };
+    }),
     rows: [...table.querySelectorAll("tbody tr")].map((row) =>
       [...row.querySelectorAll("th, td")].map((cell) => {
         const link = cell.querySelector("a");

@@ -19,10 +19,15 @@
          composed rather than reverting to the macro. #}
       <div class="moj-search">
         <form action="/applications" method="get">
-          {# Each form carries the other's state, so applying one cannot discard the other. #}
+          {# Each form carries every other control's state, so using one cannot
+             discard the others. #}
           {% for service in selectedServices %}
             <input type="hidden" name="service" value="{{ service }}">
           {% endfor %}
+          {% if activeOrder %}
+            <input type="hidden" name="sort" value="{{ activeOrder.sort }}">
+            <input type="hidden" name="direction" value="{{ activeOrder.direction }}">
+          {% endif %}
 
           {{ govukInput({
             classes: "moj-search__input",
@@ -59,6 +64,10 @@
         {% if searchName %}
           <input type="hidden" name="name" value="{{ searchName }}">
         {% endif %}
+        {% if activeOrder %}
+          <input type="hidden" name="sort" value="{{ activeOrder.sort }}">
+          <input type="hidden" name="direction" value="{{ activeOrder.direction }}">
+        {% endif %}
 
         {# mojFilter puts `optionsHtml` through `| safe`. Sound here, and only because of
            what this block is: one macro call over the server-defined service list, with
@@ -86,14 +95,28 @@
         ]) %}
       {% endfor %}
 
+      {# No data-module="moj-sortable-table" here, deliberately. MoJ's sortable
+         table reorders rows in the DOM, so it would sort only the page on screen
+         once pagination lands, and do nothing at all with JavaScript off. Sorting
+         happens in the query; we keep the component's aria-sort contract and
+         drop its script. #}
+      {% set headCells = [] %}
+      {% for heading in tableHead %}
+        {% if heading.href %}
+          {% set headingLink %}<a class="govuk-link govuk-link--no-visited-state" href="{{ heading.href }}">{{ heading.text }}</a>{% endset %}
+          {% set appended = headCells.push({
+            html: headingLink,
+            attributes: { "aria-sort": heading.ariaSort }
+          }) %}
+        {% else %}
+          {% set appended = headCells.push({ text: heading.text }) %}
+        {% endif %}
+      {% endfor %}
+
       {{ govukTable({
         caption: tableCaption,
         captionClasses: "govuk-visually-hidden",
-        head: [
-          { text: "Full name" },
-          { text: "Reference" },
-          { text: "Submitted" }
-        ],
+        head: headCells,
         rows: tableRows
       }) }}
     {% elif showControls %}

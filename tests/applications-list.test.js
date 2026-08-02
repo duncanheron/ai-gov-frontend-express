@@ -14,6 +14,14 @@ const hiddenValues = (form, name) =>
     input.getAttribute("value"),
   );
 
+// Null when a form carries no order at all, which is the default-sort state - a
+// form carrying "the default" explicitly is a different thing from carrying none.
+const hiddenOrder = (form) => {
+  const [sort] = hiddenValues(form, "sort");
+  const [direction] = hiddenValues(form, "direction");
+  return sort || direction ? { sort, direction } : null;
+};
+
 // Reads the parts of the page that are not the table: the search box and filter panel
 // (as their rendered attributes, not the raw markup) and the messages inside <main>, so
 // a test can tell "no matches" from "no applications yet". `search` and `filter` are
@@ -42,14 +50,16 @@ function parseListPage(html) {
       method: form.getAttribute("method"),
       buttonText: form.querySelector("button").textContent.trim(),
     },
-    // What each form would submit on the other's behalf. The filter survives a search,
-    // and the search survives a filter, only if these are here.
+    // What each form would submit on the others' behalf. The filter survives a search,
+    // the search survives a filter, and the sort survives both, only if these are here.
     searchCarriesServices: form && hiddenValues(form, "service"),
+    searchCarriesOrder: form && hiddenOrder(form),
     clearLink: clear && { text: clear.textContent.trim(), href: clear.getAttribute("href") },
     filter: filter && {
       action: filterForm.getAttribute("action"),
       method: filterForm.getAttribute("method"),
       carriesSearch: hiddenValues(filterForm, "name"),
+      carriesOrder: hiddenOrder(filterForm),
       submitText: filter.querySelector(".moj-filter__options button").textContent.trim(),
       checkboxes: [...filter.querySelectorAll("input[type='checkbox'][name='service']")].map(
         (box) => ({
@@ -576,6 +586,19 @@ describe("applications list page - service filter", () => {
     );
   });
 
+  it("carries the active sort through the filter panel, so applying a filter keeps it", async () => {
+    await seedOnePerService();
+
+    const sorted = await request(getServer()).get(
+      "/applications?sort=name&direction=ascending&service=housing",
+    );
+
+    expect(parseListPage(sorted.text).filter.carriesOrder).toEqual({
+      sort: "name",
+      direction: "ascending",
+    });
+  });
+
   it("drives the whole panel through plain GET requests, adding no script of its own (criterion 9)", async () => {
     await seedOnePerService();
 
@@ -590,5 +613,199 @@ describe("applications list page - service filter", () => {
     // MoJ's filter component ships JavaScript that collapses the panel (CBLT-139). Until
     // that lands the panel must need none, so nothing here may depend on a script.
     expect(page.scriptSources).toEqual(["/javascripts/govuk-frontend.min.js"]);
+  });
+});
+
+describe("applications list page - sorting", () => {
+  beforeEach(async () => {
+    await truncateAllTables();
+  });
+
+  // Case is the point: ordering on the raw column puts every capital before every
+  // lower-case letter, so "alice" would sort after "Zoe" rather than beside "Alan".
+  async function seedMixedCaseNames() {
+    await createApplication({
+      fullName: "Zoe Zhang",
+      submittedAt: new Date("2026-01-01T09:00:00.000Z"),
+    });
+    await createApplication({
+      fullName: "alice Adams",
+      submittedAt: new Date("2026-01-02T09:00:00.000Z"),
+    });
+    await createApplication({
+      fullName: "Alan Turing",
+      submittedAt: new Date("2026-01-03T09:00:00.000Z"),
+    });
+  }
+
+  const heading = (table, label) => table.headings.find((cell) => cell.text === label);
+  const endsOfList = (table) => {
+    const listed = names(table);
+    return [listed[0], listed[listed.length - 1]];
+  };
+
+  it("orders A-Z on the first click of Full name, and reverses on the second (criteria 1 and 3)", async () => {
+    await seedMixedCaseNames();
+
+    const landing = await request(getServer()).get("/applications");
+    const ascendingHref = heading(parseTable(landing.text), "Full name").href;
+
+    const ascending = await request(getServer()).get(ascendingHref);
+    expect(ascending.status).toBe(200);
+    expect(names(parseTable(ascending.text))).toEqual(["Alan Turing", "alice Adams", "Zoe Zhang"]);
+
+    const descendingHref = heading(parseTable(ascending.text), "Full name").href;
+    const descending = await request(getServer()).get(descendingHref);
+    expect(endsOfList(parseTable(descending.text))).toEqual(["Zoe Zhang", "Alan Turing"]);
+  });
+
+  it("orders oldest first on the first click of Submitted, and newest first on the second (criterion 2)", async () => {
+    await seedMixedCaseNames();
+
+    const landing = await request(getServer()).get("/applications");
+    const oldestHref = heading(parseTable(landing.text), "Submitted").href;
+
+    const oldest = await request(getServer()).get(oldestHref);
+    expect(endsOfList(parseTable(oldest.text))).toEqual(["Zoe Zhang", "Alan Turing"]);
+
+    const newestHref = heading(parseTable(oldest.text), "Submitted").href;
+    const newest = await request(getServer()).get(newestHref);
+    expect(endsOfList(parseTable(newest.text))).toEqual(["Alan Turing", "Zoe Zhang"]);
+  });
+
+  it("lands on newest first with Submitted reported as the active sort (criterion 8)", async () => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get("/applications");
+
+    const table = parseTable(response.text);
+    expect(endsOfList(table)).toEqual(["Alan Turing", "Zoe Zhang"]);
+    expect(heading(table, "Submitted").ariaSort).toBe("descending");
+    expect(heading(table, "Full name").ariaSort).toBe("none");
+  });
+
+  it.each([
+    ["sort=name&direction=ascending", "ascending", "none"],
+    ["sort=name&direction=descending", "descending", "none"],
+    ["sort=submitted&direction=ascending", "none", "ascending"],
+    ["sort=submitted&direction=descending", "none", "descending"],
+  ])(
+    "reports the sorted column and direction for ?%s (criterion 5)",
+    async (query, name, submitted) => {
+      await seedMixedCaseNames();
+
+      const response = await request(getServer()).get(`/applications?${query}`);
+
+      const table = parseTable(response.text);
+      expect(heading(table, "Full name").ariaSort).toBe(name);
+      expect(heading(table, "Submitted").ariaSort).toBe(submitted);
+    },
+  );
+
+  it("leaves Reference unclickable and reporting no sort state at all (criterion 6)", async () => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get("/applications?sort=name&direction=ascending");
+
+    const reference = heading(parseTable(response.text), "Reference");
+    expect(reference.href).toBeNull();
+    // Null, not "none": a column that cannot be sorted makes no sort claim.
+    expect(reference.ariaSort).toBeNull();
+  });
+
+  it.each([
+    ["a sort that names nothing", "?sort=not-a-column"],
+    ["a real column that is not offered", "?sort=email"],
+    ["a key inherited from Object.prototype", "?sort=constructor"],
+    ["a sort carrying SQL", "?sort=full_name%3B%20DROP%20TABLE%20applications"],
+  ])("shows the default order, not an error, for %s (criterion 7)", async (_description, query) => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get(`/applications${query}`);
+
+    expect(response.status).toBe(200);
+    const table = parseTable(response.text);
+    expect(endsOfList(table)).toEqual(["Alan Turing", "Zoe Zhang"]);
+    expect(heading(table, "Submitted").ariaSort).toBe("descending");
+    // The table is still there afterwards, so nothing reached the database.
+    expect(await applications.list()).toHaveLength(3);
+  });
+
+  // The column and the direction fall back independently, so a usable sort is not
+  // thrown away just because the direction beside it was nonsense.
+  it("keeps a valid column and falls back only the direction (criterion 7)", async () => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get("/applications?sort=name&direction=sideways");
+
+    expect(response.status).toBe(200);
+    const table = parseTable(response.text);
+    expect(endsOfList(table)).toEqual(["Zoe Zhang", "Alan Turing"]);
+    expect(heading(table, "Full name").ariaSort).toBe("descending");
+    expect(heading(table, "Submitted").ariaSort).toBe("none");
+  });
+
+  it("keeps the search term and the selected services in each heading link (criterion 4)", async () => {
+    await createApplication({ fullName: "Grace Hopper", flow: "housing" });
+
+    const response = await request(getServer()).get("/applications?name=grace&service=housing");
+
+    const table = parseTable(response.text);
+    expect(heading(table, "Full name").href).toBe(
+      "/applications?name=grace&service=housing&sort=name&direction=ascending",
+    );
+    expect(heading(table, "Submitted").href).toBe(
+      "/applications?name=grace&service=housing&sort=submitted&direction=ascending",
+    );
+  });
+
+  it("keeps the sort when a search is run from a sorted list (criterion 4)", async () => {
+    await seedMixedCaseNames();
+
+    const sorted = await request(getServer()).get("/applications?sort=name&direction=ascending");
+
+    expect(parseListPage(sorted.text).searchCarriesOrder).toEqual({
+      sort: "name",
+      direction: "ascending",
+    });
+  });
+
+  it("sorts within a search rather than discarding it (criterion 4)", async () => {
+    await createApplication({ fullName: "Grace Zhang" });
+    await createApplication({ fullName: "grace Adams" });
+    await createApplication({ fullName: "Alan Turing" });
+
+    const response = await request(getServer()).get(
+      "/applications?name=grace&sort=name&direction=ascending",
+    );
+
+    expect(names(parseTable(response.text))).toEqual(["grace Adams", "Grace Zhang"]);
+    expect(parseListPage(response.text).search).toMatchObject({ value: "grace" });
+  });
+
+  it("carries no order in the forms while the default is showing, so a plain search stays plain", async () => {
+    await seedMixedCaseNames();
+
+    const landing = await request(getServer()).get("/applications");
+
+    const page = parseListPage(landing.text);
+    expect(page.searchCarriesOrder).toBeNull();
+    expect(page.filter.carriesOrder).toBeNull();
+  });
+
+  it("sorts on the server, wiring up none of MoJ's client-side sorting (criterion 9)", async () => {
+    await seedMixedCaseNames();
+
+    const response = await request(getServer()).get("/applications?sort=name&direction=ascending");
+
+    const table = parseTable(response.text);
+    // MoJ's sortable-table reorders rows already in the DOM. Attached here it would
+    // sort only the current page once CBLT-138 lands, and nothing without JavaScript.
+    expect(table.sortModule).toBeNull();
+    expect(parseListPage(response.text).scriptSources).toEqual([
+      "/javascripts/govuk-frontend.min.js",
+    ]);
+    // Every heading is a plain link, so the order survives with scripting off.
+    expect(heading(table, "Full name").href).toBe("/applications?sort=name&direction=descending");
   });
 });

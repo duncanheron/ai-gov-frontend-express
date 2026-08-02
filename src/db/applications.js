@@ -57,7 +57,31 @@ function escapeLikeWildcards(value) {
   return value.replace(/[\\%_]/g, (character) => LIKE_WILDCARDS[character]);
 }
 
-async function list({ name, services } = {}) {
+// ORDER BY cannot take a bound parameter, so the column and direction are looked
+// up here and never interpolated from the request. Sorting names on LOWER() keeps
+// mixed case together whatever collation the database was created with, which
+// differs between the Testcontainers image and Neon.
+const SORT_EXPRESSIONS = { name: "LOWER(full_name)", submitted: "submitted_at" };
+const SORT_DIRECTIONS = { ascending: "ASC", descending: "DESC" };
+const DEFAULT_SORT = "submitted";
+const DEFAULT_DIRECTION = "descending";
+
+// hasOwn, not a bare lookup: ?sort=constructor would otherwise reach SQL as a
+// value inherited from Object.prototype.
+function fromWhitelist(table, key, fallback) {
+  return Object.hasOwn(table, key) ? table[key] : table[fallback];
+}
+
+function orderBy(sort, direction) {
+  const column = fromWhitelist(SORT_EXPRESSIONS, sort, DEFAULT_SORT);
+  const order = fromWhitelist(SORT_DIRECTIONS, direction, DEFAULT_DIRECTION);
+  // The primary key breaks every tie, so the order is total. Without it rows
+  // sharing a submitted_at can swap between identical queries - invisible today,
+  // and "a row on two pages, or none" once LIMIT/OFFSET arrives (CBLT-138).
+  return `${column} ${order}, id ASC`;
+}
+
+async function list({ name, services, sort, direction } = {}) {
   const trimmedName = typeof name === "string" ? name.trim() : "";
   const conditions = [];
   const params = [];
@@ -76,7 +100,7 @@ async function list({ name, services } = {}) {
 
   const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
   const result = await pool.query(
-    `SELECT * FROM applications${where} ORDER BY submitted_at DESC`,
+    `SELECT * FROM applications${where} ORDER BY ${orderBy(sort, direction)}`,
     params,
   );
   return result.rows;

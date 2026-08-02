@@ -28,6 +28,21 @@ function serviceLabel(value) {
   return SERVICE_LABELS.get(value);
 }
 
+// The columns a caseworker can order by, with the heading each one labels.
+// `Reference` is deliberately absent - it sorts by nothing a caseworker wants.
+const SORTS = [
+  { key: "name", label: "Full name" },
+  { key: "submitted", label: "Submitted" },
+];
+
+const DIRECTIONS = ["ascending", "descending"];
+const DEFAULT_SORT = "submitted";
+const DEFAULT_DIRECTION = "descending";
+
+function oneOf(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
 // `service` is repeatable, so Express hands it over as a string, an array or nothing
 // depending on how many boxes were ticked. `toStr` cannot express that - it collapses an
 // array to its first element, so two ticked boxes would silently become one. Filtering
@@ -46,6 +61,15 @@ function parse(query) {
   return {
     name: toStr(query.name).replace(CONTROL_CHARACTERS, "").trim().slice(0, MAX_NAME_LENGTH),
     services: toServices(query.service),
+    // An unrecognised sort falls back rather than erroring, so a hand-edited URL
+    // is a normal page. This is also what keeps an arbitrary string away from
+    // ORDER BY, which cannot take a bound parameter.
+    sort: oneOf(
+      toStr(query.sort),
+      SORTS.map(({ key }) => key),
+      DEFAULT_SORT,
+    ),
+    direction: oneOf(toStr(query.direction), DIRECTIONS, DEFAULT_DIRECTION),
   };
 }
 
@@ -53,7 +77,12 @@ function parse(query) {
 // the search - so they are all built from the parsed current query rather than assembled
 // by hand. CBLT-137's sort links join here as another entry in `changes`.
 function buildUrl(current = {}, changes = {}) {
-  const { name = "", services = [] } = { ...current, ...changes };
+  const {
+    name = "",
+    services = [],
+    sort = DEFAULT_SORT,
+    direction = DEFAULT_DIRECTION,
+  } = { ...current, ...changes };
 
   const params = new URLSearchParams();
   if (name) {
@@ -62,9 +91,33 @@ function buildUrl(current = {}, changes = {}) {
   for (const service of services) {
     params.append("service", service);
   }
+  // The default order is what a bare /applications already gives, so leaving it
+  // out keeps the cleared list at /applications rather than a URL that only
+  // looks like a filter.
+  if (sort !== DEFAULT_SORT || direction !== DEFAULT_DIRECTION) {
+    params.set("sort", sort);
+    params.set("direction", direction);
+  }
 
   const query = params.toString();
   return query ? `${PATH}?${query}` : PATH;
 }
 
-module.exports = { parse, buildUrl, serviceLabel, SERVICES, MAX_NAME_LENGTH };
+// Where a column heading points: this page ordered by that column, reversed if it
+// is already the active one, and always ascending when arriving at a new column.
+function sortUrl(current, key) {
+  const reversed = current.sort === key && current.direction === "ascending";
+  return buildUrl(current, { sort: key, direction: reversed ? "descending" : "ascending" });
+}
+
+module.exports = {
+  parse,
+  buildUrl,
+  sortUrl,
+  serviceLabel,
+  SERVICES,
+  SORTS,
+  MAX_NAME_LENGTH,
+  DEFAULT_SORT,
+  DEFAULT_DIRECTION,
+};
