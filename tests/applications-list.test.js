@@ -19,6 +19,7 @@ function parseListPage(html) {
   const { document } = dom.window;
   const input = document.querySelector(".moj-search input[name='name']");
   const form = input && input.closest("form");
+  const clear = document.querySelector('.moj-search a[href="/applications"]');
 
   const parsed = {
     search: input && {
@@ -32,7 +33,12 @@ function parseListPage(html) {
       method: form.getAttribute("method"),
       buttonText: form.querySelector("button").textContent.trim(),
     },
-    messages: [...document.querySelectorAll("main p")].map((p) => p.textContent.trim()),
+    clearLink: clear && { text: clear.textContent.trim(), href: clear.getAttribute("href") },
+    // Status messages only - the search box has a paragraph of its own, and a test
+    // distinguishing "no matches" from "no applications yet" must not see it.
+    messages: [...document.querySelectorAll("main p")]
+      .filter((p) => !p.closest(".moj-search"))
+      .map((p) => p.textContent.trim()),
     scripts: [...document.querySelectorAll("script")].map((script) => script.textContent),
     elementCount: document.querySelectorAll("*").length,
   };
@@ -199,6 +205,28 @@ describe("applications list page", () => {
     const response = await request(getServer()).get("/applications?name=Nobody");
 
     expect(parseListPage(response.text).search).toMatchObject({ value: "Nobody" });
+  });
+
+  it.each([
+    ["a term that matches", "grace"],
+    ["a term that matches nothing", "Nobody"],
+  ])("offers a link back to the unfiltered list after %s", async (_description, term) => {
+    await seedThreeApplicants();
+
+    const searched = await request(getServer()).get(`/applications?name=${term}`);
+    expect(parseListPage(searched.text).clearLink).toEqual({
+      text: "Clear search",
+      href: "/applications",
+    });
+
+    const cleared = await request(getServer()).get(parseListPage(searched.text).clearLink.href);
+    expect(cleared.status).toBe(200);
+    expect(names(parseTable(cleared.text))).toEqual([
+      "Alan Turing",
+      "Marianne Grace",
+      "Grace Hopper",
+    ]);
+    expect(parseListPage(cleared.text).clearLink).toBeNull();
   });
 
   it("takes the first value when the term is repeated in a hand-edited URL", async () => {

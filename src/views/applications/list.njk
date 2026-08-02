@@ -29,6 +29,14 @@
 
           {{ govukButton({ classes: "moj-search__button", text: "Search" }) }}
         </form>
+
+        {# The component's native clear control is unreachable by keyboard and screen
+           reader, so a search is only escapable through this link. #}
+        {% if searchName %}
+          <p class="govuk-body govuk-!-margin-top-2">
+            <a class="govuk-link" href="/applications">Clear search</a>
+          </p>
+        {% endif %}
       </div>
     {% endif %}
 
