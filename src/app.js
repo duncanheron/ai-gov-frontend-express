@@ -26,8 +26,20 @@ const payGardenWasteRouter = require("./routes/payGardenWaste");
 // Cookie and Authorization headers can carry live session/credential values.
 // Redacting them keeps request logs safe to share/aggregate without leaking
 // a way to hijack an active session (see CBLT-95).
+//
+// `req.query.name` is an applicant's name, typed into the search on /applications.
+// It reaches the log twice, so redacting the parsed value alone is not enough: the
+// default serializer also emits the raw `url`, where the term survives verbatim.
+// Dropping the query string from `url` keeps the path, which is the part worth
+// logging, and leaves the remaining parameters visible in `query`.
 const pinoHttpOptions = {
-  redact: ["req.headers.cookie", "req.headers.authorization"],
+  redact: ["req.headers.cookie", "req.headers.authorization", "req.query.name"],
+  serializers: {
+    req(request) {
+      const serialized = pinoHttp.stdSerializers.req(request);
+      return { ...serialized, url: serialized.url.split("?")[0] };
+    },
+  },
 };
 
 function createApp() {
