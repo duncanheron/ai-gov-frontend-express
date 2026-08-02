@@ -62,6 +62,14 @@ comment is longer than the code it describes, cut it.
   `/pay-council-tax`, `/pay-garden-waste`) are GOV.UK only. MoJ components are
   built on GOV.UK ones, so GOV.UK components remain available everywhere — it is
   reaching for an MoJ component on a citizen page that is wrong.
+- The split holds at the JavaScript layer too. MoJ's bundle loads only on caseworker
+  pages, through `layout.njk`'s `pageScripts` block, which citizen journeys leave
+  empty so their payload is unchanged. It inlines its own copy of GOV.UK Frontend, so
+  it runs alongside the layout's GOV.UK `initAll` and never replaces it — MoJ's
+  `initAll` initialises no GOV.UK components, and the header would stop working.
+  Import the components you want by name: MoJ 10's `initAll` iterates a hardcoded list
+  that omits `FilterToggleButton` and includes `SortableTable`, so it silently builds
+  nothing you asked for and may wire up something you did not.
 
 ## Tests
 

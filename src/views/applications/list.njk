@@ -8,14 +8,25 @@
 {% block pageTitle %}Applications{% endblock %}
 
 {# Caseworker-only. MoJ's bundle inlines its own copy of GOV.UK Frontend, so this runs
-   alongside the layout's initAll rather than replacing it - MoJ's does not initialise
-   GOV.UK components, and the header and service navigation would stop working. The two
-   touch disjoint component sets, so nothing initialises twice. #}
+   alongside the layout's GOV.UK initAll rather than replacing it - MoJ's does not
+   initialise GOV.UK components, and the header and service navigation would stop
+   working.
+
+   The one component, constructed directly, rather than MoJ's initAll. Verified against
+   version 10 in a browser: initAll iterates a hardcoded list that omits
+   FilterToggleButton entirely, so it returns cleanly having built nothing - the button
+   simply never appears. The list does include SortableTable, which would then wire
+   itself to any table we later mark up, which CBLT-137 deliberately avoids. #}
 {% block pageScripts %}
   <script type="module" nonce="{{ cspNonce }}" src="/javascripts/moj-frontend.min.js"></script>
   <script type="module" nonce="{{ cspNonce }}">
-    import { initAll } from '/javascripts/moj-frontend.min.js'
-    initAll()
+    import { FilterToggleButton } from '/javascripts/moj-frontend.min.js'
+
+    // Absent whenever there is nothing to filter.
+    const filter = document.querySelector('[data-module="moj-filter"]')
+    if (filter) {
+      new FilterToggleButton(filter)
+    }
   </script>
 {% endblock %}
 

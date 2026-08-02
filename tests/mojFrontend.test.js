@@ -28,7 +28,16 @@ const scriptsOn = (html) => {
 describe("MoJ Frontend styles", () => {
   // Each component is imported separately, so a missing @use costs that component its
   // styling alone - the page still renders, and every other test still passes.
-  it.each([[".moj-search"], [".moj-filter"], [".moj-filter__tag"], [".moj-action-bar__filter"]])(
+  // `.moj-js-hidden` is the one that collapses the filter panel, and it comes from a
+  // utilities partial rather than a component - easy to miss, and missing it leaves a
+  // toggle that flips aria-expanded and hides nothing.
+  it.each([
+    [".moj-search"],
+    [".moj-filter"],
+    [".moj-filter__tag"],
+    [".moj-action-bar__filter"],
+    [".moj-js-hidden"],
+  ])(
     "serves the %s styles in the compiled stylesheet",
     async (selector) => {
       const response = await request(getServer()).get("/stylesheets/main.css");
