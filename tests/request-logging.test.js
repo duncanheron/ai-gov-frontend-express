@@ -62,6 +62,24 @@ describe("request logging redaction", () => {
     expect(rawOutput).not.toContain(sessionCookie);
   });
 
+  // An applicant's name reaches the logs through the URL, not a header - pino-http's
+  // default serializer emits both `req.url` and `req.query`, so the term has to be
+  // redacted in both or it survives in one of them.
+  it("redacts an applicant's name from the search URL it was typed into", async () => {
+    const { app, getLogEntries } = buildLoggedApp();
+
+    await request(app).get("/ping?name=Ada%20Lovelace&service=housing").expect(200);
+
+    const entries = getLogEntries();
+    const completed = entries.find((entry) => entry.msg === "request completed");
+
+    expect(completed).toBeTruthy();
+    // The service is a fixed value from our own list, so it stays - it identifies nobody
+    // and it is what makes a log line useful.
+    expect(completed.req.query.service).toBe("housing");
+    expect(JSON.stringify(entries)).not.toContain("Ada");
+  });
+
   it("redacts the Authorization header from the completed-request log line", async () => {
     const { app, getLogEntries } = buildLoggedApp();
     const bearerToken = "Bearer super-secret-token-value";
