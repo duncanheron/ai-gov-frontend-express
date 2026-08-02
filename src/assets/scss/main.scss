@@ -6,7 +6,6 @@
 // that actually collapses the filter panel. Without it the toggle still flips its class
 // and aria-expanded, so it looks wired up and hides nothing.
 @use "@ministryofjustice/frontend/moj/utilities/hidden";
-@use "@ministryofjustice/frontend/moj/components/action-bar/action-bar";
 @use "@ministryofjustice/frontend/moj/components/filter/filter";
 @use "@ministryofjustice/frontend/moj/components/search/search";
 @use "govuk-frontend/dist/govuk" as *;
@@ -25,6 +24,14 @@
 // injected by the script we deliberately do not load, so a server-sorted heading
 // link inherits neither. This is the smallest thing that makes the active sort
 // visible as well as announced (criterion 5 of CBLT-137).
+// The toggle has to touch the panel it controls. MoJ's own pattern puts the panel in a
+// column beside the results, where layout alone relates the two; stacked full width, a
+// gap leaves the button looking like it belongs to the search box above it. A GOV.UK
+// button carries a bottom margin, so closing that is what makes them read as one unit.
+.app-filter-toggle .govuk-button {
+  margin-bottom: 0;
+}
+
 .govuk-table__header[aria-sort] a {
   color: inherit;
 

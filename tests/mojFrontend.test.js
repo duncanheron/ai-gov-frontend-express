@@ -31,18 +31,15 @@ describe("MoJ Frontend styles", () => {
   // `.moj-js-hidden` is the one that collapses the filter panel, and it comes from a
   // utilities partial rather than a component - easy to miss, and missing it leaves a
   // toggle that flips aria-expanded and hides nothing.
-  it.each([
-    [".moj-search"],
-    [".moj-filter"],
-    [".moj-filter__tag"],
-    [".moj-action-bar__filter"],
-    [".moj-js-hidden"],
-  ])("serves the %s styles in the compiled stylesheet", async (selector) => {
-    const response = await request(getServer()).get("/stylesheets/main.css");
+  it.each([[".moj-search"], [".moj-filter"], [".moj-filter__tag"], [".moj-js-hidden"]])(
+    "serves the %s styles in the compiled stylesheet",
+    async (selector) => {
+      const response = await request(getServer()).get("/stylesheets/main.css");
 
-    expect(response.status).toBe(200);
-    expect(response.text).toContain(selector);
-  });
+      expect(response.status).toBe(200);
+      expect(response.text).toContain(selector);
+    },
+  );
 
   // Criterion 5 of CBLT-137 needs the active sort visible, not only announced. MoJ's
   // rules target `[aria-sort] button` and their arrows come from a script that does not
@@ -67,8 +64,11 @@ describe("MoJ Frontend styles", () => {
   it("settles .moj-search__button's bottom margin after .govuk-button's", async () => {
     const response = await request(getServer()).get("/stylesheets/main.css");
 
+    // The boundary matters: without it `.app-filter-toggle .govuk-button{...}` counts as
+    // a rule for `.govuk-button`, and any future descendant selector would break this
+    // test while changing nothing about the margin it guards.
     const lastMargin = (selector) => {
-      const rule = new RegExp(`\\${selector}\\{[^}]*margin-bottom:([^;}]+)[^}]*\\}`, "g");
+      const rule = new RegExp(`(?:^|[},])\\${selector}\\{[^}]*margin-bottom:([^;}]+)[^}]*\\}`, "g");
       const matches = [...response.text.matchAll(rule)];
       return matches.length ? matches[matches.length - 1] : null;
     };
