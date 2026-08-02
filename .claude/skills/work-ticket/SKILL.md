@@ -49,6 +49,13 @@ A ticket is ready for a human to move to `Todo` when its description covers:
 
 A one-line title with no description is not enough, even for small changes.
 
+Keep it readable in about two minutes — a human reads this before approving
+it into `Todo`. Don't restate CLAUDE.md (the engineer reads it every session),
+don't argue against mistakes nobody has made yet, and give each acceptance
+criterion one line. A technical note earns its place by being a finding the
+engineer would otherwise lose an hour to, not by narrating the implementation.
+Documentation edits and unrelated findings belong in their own ticket.
+
 Slice by user-visible outcome, never by technical layer: "an applicant can
 filter the list by name" is one ticket, not three (index, query, template).
 If it lands a migration nothing reaches or a query no page calls, it's the
