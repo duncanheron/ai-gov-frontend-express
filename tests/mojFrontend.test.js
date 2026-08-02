@@ -55,28 +55,36 @@ describe("MoJ Frontend styles", () => {
     },
   );
 
-  // Layout cannot be asserted in JSDOM, which computes no cascade and no box model.
-  // What broke the button's alignment was source order between two equal-specificity
-  // rules, and that is readable from the stylesheet itself: MoJ's own
-  // .moj-search__button rule is emitted before .govuk-button's margin, so without an
-  // override emitted afterwards the button keeps a bottom margin and the flex row
-  // lifts it clear of the input.
-  it("settles .moj-search__button's bottom margin after .govuk-button's", async () => {
+  // Layout cannot be asserted in JSDOM, which computes no cascade and no box model. What
+  // breaks it is source order between two equal-specificity rules, and that is readable
+  // from the stylesheet itself.
+  //
+  // Two properties, one failure mode. MoJ sets both on .moj-search__button to opt out of
+  // govuk's defaults, but govuk's own rule is emitted later at equal specificity and
+  // wins, so each opt-out silently does nothing until restated after the import.
+  //   margin-bottom (CBLT-141) - the button hangs above the input the flex row aligns to.
+  //   width         (CBLT-144) - the button goes full width under 640px and crushes the
+  //                              label and input beside it. Invisible on desktop, where
+  //                              govuk's own media query restores auto.
+  it.each([
+    ["margin-bottom", "0"],
+    ["width", "auto"],
+  ])("settles .moj-search__button's %s after .govuk-button's", async (property, expected) => {
     const response = await request(getServer()).get("/stylesheets/main.css");
 
-    // The boundary matters: without it `.app-filter-toggle .govuk-button{...}` counts as
-    // a rule for `.govuk-button`, and any future descendant selector would break this
-    // test while changing nothing about the margin it guards.
-    const lastMargin = (selector) => {
-      const rule = new RegExp(`(?:^|[},])\\${selector}\\{[^}]*margin-bottom:([^;}]+)[^}]*\\}`, "g");
+    // Two boundaries matter. Before the selector, or `.app-filter-toggle .govuk-button`
+    // counts as a rule for `.govuk-button`. Before the property, or `max-width` reads as
+    // `width`.
+    const lastDeclaration = (selector) => {
+      const rule = new RegExp(`(?:^|[},])\\${selector}\\{(?:[^}]*;)?${property}:([^;}]+)`, "g");
       const matches = [...response.text.matchAll(rule)];
       return matches.length ? matches[matches.length - 1] : null;
     };
-    const button = lastMargin(".moj-search__button");
-    const govukButton = lastMargin(".govuk-button");
+    const button = lastDeclaration(".moj-search__button");
+    const govukButton = lastDeclaration(".govuk-button");
 
     expect(button.index).toBeGreaterThan(govukButton.index);
-    expect(button[1]).toBe("0");
+    expect(button[1]).toBe(expected);
   });
 
   it("still serves the GDS Transport font faces, which MoJ's vendored config drops", async () => {
