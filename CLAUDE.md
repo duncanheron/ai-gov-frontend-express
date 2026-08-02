@@ -66,9 +66,14 @@ comment is longer than the code it describes, cut it.
 ## Tests
 
 Jest + Supertest, against a real Postgres started by Testcontainers (requires Docker
-running locally; CI already has it). A test must fail if the behaviour it covers
-breaks — check by reverting the code and watching it go red. A test that passes
-either way is worse than none, because it reads as coverage.
+running locally; CI already has it). Write the test first and watch it fail before
+writing the code — that failure is the proof it can catch a regression, and TDD
+gives it to you as you go, nothing further needed. A test that passes either way
+is worse than none, because it reads as coverage.
+
+Where a conditional has genuinely overlapping clauses and you're not sure a test
+would catch a break, revert the fix by hand and confirm it goes red — a one-off
+spot check on that function, not a systematic mutation sweep across the diff.
 
 Assert on the element, not the page. `expect(response.text).toContain('href="/x")`
 passes if _any_ element on the page has that href — the layout alone carries 14
@@ -119,31 +124,21 @@ query and demonstrates the same thing for free.
 
 ## Agents & skills
 
-This repo runs on a two-stage pipeline: `spec-planner` turns a request into
-Linear tickets (`Backlog`, always — a human moves them to `Todo`); `engineer`
-picks up a `Todo` ticket and takes it through branch, code, tests, and PR.
-Verification by the `agent-skills` plugin's `test-engineer`, `code-reviewer`
-and `security-auditor` happens after that, triggered by the caller rather
-than by `engineer` itself.
+Pipeline: `spec-planner` turns a request into Linear tickets (`Backlog` — a
+human moves them to `Todo`); `engineer` takes a `Todo` ticket through branch,
+code, tests and PR; the top-level session then triggers `test-engineer`,
+`code-reviewer` and `security-auditor` (from the `agent-skills` plugin) to
+verify it, scaled to the size of the change.
 
 - Definitions: `.claude/agents/spec-planner.md`, `.claude/agents/engineer.md`.
-- Repo-specific mechanics (branch naming, PR contents, Linear state
-  transitions) live in `.claude/skills/work-ticket/SKILL.md` — treat it as
-  the source of truth over anything an agent file says, since it's kept
-  current with this repo.
-- General engineering practice (TDD, incremental implementation, git
-  hygiene, etc.) comes from the `agent-skills` plugin
-  (`addyosmani/agent-skills`, enabled as `agent-skills@addy-agent-skills`).
-  Don't re-implement what it already provides.
-- `test-engineer`, `code-reviewer`, and `security-auditor` are independent
-  personas — `engineer` never invokes them itself (it has no Agent/Task tool,
-  and personas calling personas is a hard Claude Code platform constraint,
-  not just a convention). Trigger verification from the top-level session when
-  the change warrants it — the caller's judgement, scaled to the change, not a
-  fixed gate on every PR. When you do, run them in parallel in one turn
-  (mirroring the plugin's `/ship` command), giving each only the PR diff and the
-  ticket's acceptance criteria — not `engineer`'s own summary or test-plan
-  narrative — so each forms an independent judgement instead of inheriting the
-  implementer's framing. Give each its own worktree (`isolation: "worktree"`):
-  they mutate source to test their findings, and in a shared checkout one
-  agent's in-flight mutation surfaces as another agent's phantom failure.
+- `.claude/skills/work-ticket/SKILL.md` is the source of truth for repo
+  mechanics — branch naming, PR contents, Linear transitions — it's kept
+  current with this repo, agent files may drift.
+- `agent-skills` (`addyosmani/agent-skills`, enabled as
+  `agent-skills@addy-agent-skills`) covers general engineering practice — TDD,
+  incremental implementation, git hygiene. Use it rather than reimplementing.
+- Run verification in parallel, one persona per worktree — a verifier may edit
+  code to confirm a finding, and a shared checkout would let that show up as a
+  sibling's phantom failure — giving each only the PR diff and the ticket's
+  acceptance criteria, so their findings stay independent of `engineer`'s own
+  account of the change.
