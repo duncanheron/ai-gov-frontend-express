@@ -124,6 +124,23 @@ describe("MoJ Frontend JavaScript", () => {
     expect(response.text).toContain("initAll");
   });
 
+  // Both bundles are loaded with `type="module"`, so they have to be ES modules. Vercel
+  // compiled them to CommonJS for weeks: still a 200, still the right content-type, and
+  // the page looked correct right up until the browser refused to run it.
+  it.each([
+    ["GOV.UK", GOVUK_BUNDLE, "initAll"],
+    ["MoJ", MOJ_BUNDLE, "FilterToggleButton"],
+  ])(
+    "serves the %s bundle as an ES module exporting what the page imports",
+    async (_name, bundle, imported) => {
+      const response = await request(getServer()).get(bundle);
+
+      expect(response.status).toBe(200);
+      expect(response.text).not.toMatch(/Object\.defineProperty\(exports\b/);
+      expect(response.text).toMatch(new RegExp(String.raw`export\{[^}]*\b${imported}\b`));
+    },
+  );
+
   it("serves the bundle's source map, so a stack trace in it is readable", async () => {
     const response = await request(getServer()).get(`${MOJ_BUNDLE}.map`);
 
