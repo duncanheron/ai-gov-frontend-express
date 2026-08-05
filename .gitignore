@@ -1,5 +1,8 @@
 node_modules/
 coverage/
+# public/ is deliberately NOT ignored - Vercel collects static assets from source
+# before the build runs, so ignoring it breaks every asset in production. CLAUDE.md
+# has the detail (CBLT-147).
 .env
 *.log
 .DS_Store
