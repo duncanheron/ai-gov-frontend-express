@@ -16,6 +16,10 @@ Deliberate deviations, so they don't get "fixed":
   a demo never drops the user out.
 - Preview and Production deployments share one Neon database; Neon preview
   branching is not enabled. Migrations run only on production builds.
+- `public/` is committed, generated files and all — Vercel collects static assets
+  from source before the build runs, so ignoring it breaks every asset in
+  production (CBLT-147). Run `npm run build:assets` and commit the result when
+  assets change; CI fails if the committed copy drifts.
 
 Being a prototype lowers the bar on scope, not on craft. Tests must fail when
 behaviour breaks, pages must pass axe, and GOV.UK patterns are followed as
@@ -129,6 +133,8 @@ query and demonstrates the same thing for free.
 - `main` is branch-protected; everything goes through a PR.
 - Migrations run in the Vercel build on production deploys — see the README.
   `npm run migrate:up` is for local development only.
+- Never deploy from the CLI. Deploys come from Vercel's GitHub integration —
+  merging to `main` deploys production, a PR gets a preview. Test on the preview.
 
 ## Agents & skills
 

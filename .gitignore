@@ -1,5 +1,7 @@
 node_modules/
 coverage/
+# public/ is deliberately NOT ignored - ignoring it breaks every asset in
+# production. See CLAUDE.md (CBLT-147).
 .env
 *.log
 .DS_Store
