@@ -16,14 +16,10 @@ Deliberate deviations, so they don't get "fixed":
   a demo never drops the user out.
 - Preview and Production deployments share one Neon database; Neon preview
   branching is not enabled. Migrations run only on production builds.
-- `public/` is committed, generated files and all. Vercel collects static assets
-  from the checked-out source _before_ the build runs, so a `public/` created
-  during `vercel-build` never reaches the CDN — every asset then falls through to
-  the Express function, which serves the JavaScript bundles compiled to CommonJS
-  while the pages load them as ES modules. That broke all GOV.UK Frontend
-  JavaScript in production, silently, for weeks (CBLT-147). Do not add `public/`
-  back to `.gitignore`. CI fails if the committed copy drifts from a fresh build,
-  so run `npm run build:assets` and commit the result when assets change.
+- `public/` is committed, generated files and all — Vercel collects static assets
+  from source before the build runs, so ignoring it breaks every asset in
+  production (CBLT-147). Run `npm run build:assets` and commit the result when
+  assets change; CI fails if the committed copy drifts.
 
 Being a prototype lowers the bar on scope, not on craft. Tests must fail when
 behaviour breaks, pages must pass axe, and GOV.UK patterns are followed as
@@ -137,15 +133,8 @@ query and demonstrates the same thing for free.
 - `main` is branch-protected; everything goes through a PR.
 - Migrations run in the Vercel build on production deploys — see the README.
   `npm run migrate:up` is for local development only.
-- Deploys come from Vercel's GitHub integration: merging to `main` deploys
-  production, and a PR gets a preview. Don't `vercel deploy` from the CLI. It
-  uploads your working directory including gitignored files, so it can succeed
-  where a real deploy fails — that asymmetry is what hid CBLT-147. Verify
-  anything deployment-shaped on a PR preview, which builds the way production
-  does. Note that CI is not a required check, so a merge deploys whether or not
-  the tests have finished.
-- `vercel build` locally rewrites `package-lock.json` with macOS-specific
-  resolutions that `npm ci` then rejects on CI. Check `git status` afterwards.
+- Never deploy from the CLI. Deploys come from Vercel's GitHub integration —
+  merging to `main` deploys production, a PR gets a preview. Test on the preview.
 
 ## Agents & skills
 
