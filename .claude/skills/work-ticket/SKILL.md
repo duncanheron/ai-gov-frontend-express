@@ -3,12 +3,11 @@ name: work-ticket
 description: Pick up or create a Linear ticket for this repo, implement it on its own branch, and open a PR linked back to the ticket. Use whenever starting work on a specific, ticket-sized piece of functionality here.
 ---
 
-This repo tracks work as Linear issues in the **ai-gov-frontend-express** project
-(team: **Cobalt**, key `CBLT`). The native GitHub<->Linear integration is
-installed for this repo, so branch/PR linking and most status transitions
-happen automatically (branch named after an issue auto-attaches to it; PRs
-referencing an issue link automatically; merging typically auto-completes the
-issue). Treat that as the primary mechanism, but verify it actually fired
+This repo tracks work as Linear issues (team/project/states: see CLAUDE.md). The
+native GitHub<->Linear integration is installed for this repo, so branch/PR
+linking and most status transitions happen automatically (branch named after an
+issue auto-attaches to it; PRs referencing an issue link automatically; merging
+typically auto-completes the issue). Treat that as the primary mechanism, but verify it actually fired
 (check the issue's status/attachments after pushing/merging) and fall back to
 the Linear MCP tools (`save_issue`, `save_comment`) to fix it by hand if it
 didn't — the automation has been inconsistent before (some issues transitioned
@@ -107,9 +106,7 @@ field, one page — not to a layer. Groundwork with no user surface by nature
 
 ## Notes
 
-- Team's issue states: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`,
-  `Canceled`, `Duplicate`. A ticket sits in `In Review` for the PR-open/review
-  period, so move it there when the PR goes up rather than leaving it
-  `In Progress`.
+- A ticket sits in `In Review` for the PR-open/review period, so move it there
+  when the PR goes up rather than leaving it `In Progress`.
 - `main` has GitHub branch protection enabled and rejects direct pushes — all
   changes, with no exceptions, go through a PR.

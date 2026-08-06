@@ -22,10 +22,9 @@ Run these in order as needed: `interview-me`/`idea-refine` (if the ask is vague)
 
 ## Workspace facts
 
-- Linear team: **Cobalt** (key `CBLT`).
-- Linear project: **ai-gov-frontend-express** (there is also a separate "Project Cobalt" project in the same team -- don't confuse the two; default to **ai-gov-frontend-express** unless told otherwise).
-- Issue states: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate`.
-- Verify team/project/state names with `list_teams` / `list_projects` / `list_issue_statuses` before writing -- don't hardcode against this doc if Linear disagrees, workspaces get renamed.
+Linear team/project/issue states are in CLAUDE.md (loaded automatically every
+session) -- verify live with `list_teams`/`list_issue_statuses` before writing,
+since workspaces get renamed and CLAUDE.md can drift.
 
 ## How to slice tickets
 
