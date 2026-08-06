@@ -45,6 +45,12 @@ Legitimate exceptions -- name the exception in the ticket when you use one:
 - Groundwork with no user-facing surface by nature (dependency upgrade, CI change, hosting config).
 - A slice genuinely too large for one reviewable PR. Cut it into _narrower user outcomes_ -- one journey, one field, one page -- not into layers.
 
+## Keep the PR reviewable by a human
+
+Judge that on the `src/` diff, not the PR total. Recent feature tickets here landed 90-200 lines of `src/` against 350-500 lines of tests, so total line count mostly measures test volume -- and tests scale with the behaviour, so they never justify a narrower slice or a thinner one.
+
+What makes a PR hard to review is how many surfaces move at once for how many outcomes. One outcome crossing query, route, template and styles is one ticket, however many tests it needs. Two outcomes sharing those same surfaces is two tickets, even if each is fifty lines. If you can't state the outcome in one sentence without "and", you have two.
+
 ## Ticket quality bar
 
 Every ticket must include, in the Linear description:
@@ -55,7 +61,7 @@ Every ticket must include, in the Linear description:
 - **Acceptance criteria** -- a checklist of what "done" looks like, written as things you could watch someone do in the running service (this is what `test-engineer` will check against later, so make it concrete and testable).
 - **Technical notes** -- files/patterns to reuse, constraints, anything the engineer would otherwise have to re-derive or ask about. Layer-by-layer implementation detail lives here, as notes -- never as separate tickets.
 
-A one-line title with no description is never acceptable, even for small changes. One ticket should still be one reviewable PR's worth of work.
+A one-line title with no description is never acceptable, even for small changes.
 
 ## Keep it short enough to be read
 
