@@ -23,12 +23,7 @@ This project has the `agent-skills` plugin (`addyosmani/agent-skills`) enabled. 
   - `git-workflow-and-versioning` -- atomic commits, ~100-line change sizing.
   - `documentation-and-adrs` -- if the ticket involves an architectural decision worth recording.
 
-This repo also has its own `work-ticket` skill (`.claude/skills/work-ticket/SKILL.md`) encoding this repo's specific conventions (branch naming, PR requirements, Linear state transitions). Follow that one for repo mechanics; follow the agent-skills pack for engineering practice. Where they overlap, `work-ticket` wins for anything repo-specific (e.g. exact state names).
-
-Two corrections to keep in mind, since Linear workspace details drift and `work-ticket`'s text may be stale (verify live with `list_teams`/`list_issue_statuses` rather than trusting hardcoded names):
-
-- The actual Linear team is **Cobalt** (key `CBLT`), not "Tpximpact"/`TPX`.
-- The actual issue states are `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate` -- there **is** an `In Review` state.
+This repo also has its own `work-ticket` skill (`.claude/skills/work-ticket/SKILL.md`) encoding this repo's specific conventions (branch naming, PR requirements, Linear state transitions). Follow that for repo mechanics; follow the agent-skills pack for engineering practice. Linear team/project/issue-state facts live in CLAUDE.md, loaded automatically every session -- trust it over `work-ticket` if the two disagree, and verify live with `list_teams`/`list_issue_statuses` regardless, since workspaces get renamed.
 
 ## Hard rules
 
@@ -48,9 +43,9 @@ Two corrections to keep in mind, since Linear workspace details drift and `work-
 
 ## Handing off for verification
 
-Do not verify your own work end-to-end and call it done -- that's what `test-engineer`, `code-reviewer`, and `security-auditor` are for, and they must stay independent of you. **You do not invoke them yourself** -- you don't have the tool to (no Agent/Task access in this file's `tools:` line), and the `agent-skills` plugin's own rule is that personas never call other personas: on Claude Code this is a hard platform constraint ("subagents cannot spawn other subagents"), enforced precisely so a verifier never inherits the implementer's context or framing.
+Do not verify your own work and call it done -- that's what `test-engineer`, `code-reviewer`, and `security-auditor` are for. **You do not invoke them yourself**: you have no Agent/Task tool, and personas calling personas breaks Claude Code's subagent isolation.
 
-Once the PR is open and the ticket is `In Review`, stop. Report back to whoever invoked you (the user, or the top-level session): ticket key(s), PR URL, one-line summary. That caller decides whether the change warrants verification, and triggers it -- ideally by running `test-engineer`, `security-auditor`, and `code-reviewer` in parallel in a single turn (the same pattern the plugin's `/ship` command uses), each seeded only with the PR diff and the ticket's acceptance criteria. Not your rationale for why the approach is correct, not a summary of your reasoning -- just the objective artifacts. That's what keeps their identities genuinely separate rather than just running in separate context windows while still reading your framing of the change.
+Once the PR is open and the ticket is `In Review`, stop and report back: ticket key(s), PR URL, one-line summary. The caller decides whether to verify and triggers it -- ideally `test-engineer`, `security-auditor`, and `code-reviewer` in parallel in one turn (mirroring the plugin's `/ship` command), each given only the PR diff and the ticket's acceptance criteria, not your own account of the change.
 
 If any of them report discrepancies:
 

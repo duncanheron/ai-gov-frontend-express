@@ -21,9 +21,7 @@ Deliberate deviations, so they don't get "fixed":
   production (CBLT-147). Run `npm run build:assets` and commit the result when
   assets change; CI fails if the committed copy drifts.
 
-Being a prototype lowers the bar on scope, not on craft. Tests must fail when
-behaviour breaks, pages must pass axe, and GOV.UK patterns are followed as
-written — the point of a prototype is to learn whether the real thing would work.
+Being a prototype lowers the bar on scope, not on craft.
 
 ## Comments
 
@@ -78,10 +76,11 @@ comment is longer than the code it describes, cut it.
 ## Tests
 
 Jest + Supertest, against a real Postgres started by Testcontainers (requires Docker
-running locally; CI already has it). Write the test first and watch it fail before
-writing the code — that failure is the proof it can catch a regression, and TDD
-gives it to you as you go, nothing further needed. A test that passes either way
-is worse than none, because it reads as coverage.
+running locally; CI already has it). Pages must pass axe (`tests/accessibility.test.js`).
+Write the test first and watch it fail before writing the code — that failure is
+the proof it can catch a regression, and TDD gives it to you as you go, nothing
+further needed. A test that passes either way is worse than none, because it
+reads as coverage.
 
 Where a conditional has genuinely overlapping clauses and you're not sure a test
 would catch a break, revert the fix by hand and confirm it goes red — a one-off
@@ -110,10 +109,15 @@ query and demonstrates the same thing for free.
 
 ## Process
 
-- Work is tracked in Linear (team Cobalt, `CBLT`). Docs and specs live there, not
-  in markdown files in this repo.
+- Work is tracked in Linear: team Cobalt (`CBLT`), project
+  `ai-gov-frontend-express` — a separate "Project Cobalt" project exists in
+  the same team, don't confuse the two. Docs and specs live in Linear, not
+  markdown files in this repo.
 - Set `project: "ai-gov-frontend-express"` on every issue. Team Cobalt serves
   other products too, and a project-less issue is invisible in the project view.
+- Issue states: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`,
+  `Canceled`, `Duplicate`. Verify live with `list_teams`/`list_issue_statuses`
+  rather than trusting this list — workspaces get renamed.
 - Describe attack payloads in prose, not literally — a `<script>` tag or a
   `DROP TABLE` string in an issue body gets the write blocked by Cloudflare.
 - No code without an approved `Todo` issue. Moving `Backlog` → `Todo` is a
