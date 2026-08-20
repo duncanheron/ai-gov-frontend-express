@@ -16,7 +16,7 @@ const JOURNEYS = [
   { prefix: "/pay-garden-waste", serviceName: "Pay for garden waste" },
 ];
 
-const SECTIONS = [{ prefix: "/applications", serviceName: "Manage applications" }];
+const SECTIONS = [{ prefix: "/applications", serviceName: DEFAULT_SERVICE_NAME }];
 
 function matches(path, prefix) {
   return path === prefix || path.startsWith(`${prefix}/`);
