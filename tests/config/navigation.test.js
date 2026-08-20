@@ -28,19 +28,19 @@ describe("navigation config", () => {
       expect(context.navigationItems).toHaveLength(2);
     });
 
-    it("resolves the Manage applications name and navigation, marking Applications current", () => {
+    it("resolves the default service name for /applications, marking Applications current", () => {
       const context = navigation.resolveServiceContext("/applications");
 
-      expect(context.serviceName).toBe("Manage applications");
+      expect(context.serviceName).toBe("Apply and pay for council services");
       expect(context.navigationItems.find((item) => item.href === "/applications").current).toBe(
         true,
       );
     });
 
-    it("resolves Manage applications for an applications detail sub-path", () => {
+    it("resolves the default service name for an applications detail sub-path", () => {
       const context = navigation.resolveServiceContext("/applications/ABCD-123-XYZ");
 
-      expect(context.serviceName).toBe("Manage applications");
+      expect(context.serviceName).toBe("Apply and pay for council services");
       expect(context.navigationItems.find((item) => item.href === "/applications").current).toBe(
         true,
       );

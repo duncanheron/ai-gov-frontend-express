@@ -44,10 +44,10 @@ describe("header navigation", () => {
       );
     });
 
-    it("applications list page shows the Manage applications service name and the navigation, with Applications current", async () => {
+    it("applications list page shows the default service name and the navigation, with Applications current", async () => {
       const response = await request(getServer()).get("/applications");
 
-      expect(response.text).toContain("Manage applications");
+      expect(response.text).toContain("Apply and pay for council services");
       expect(response.text).toContain(
         '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
       );
@@ -56,10 +56,10 @@ describe("header navigation", () => {
       );
     });
 
-    it("an applications detail page shows the Manage applications service name and the navigation, with Applications current", async () => {
+    it("an applications detail page shows the default service name and the navigation, with Applications current", async () => {
       const response = await request(getServer()).get("/applications/DOES-NOT-EXIST");
 
-      expect(response.text).toContain("Manage applications");
+      expect(response.text).toContain("Apply and pay for council services");
       expect(response.text).toContain(
         '<a class="govuk-service-navigation__link" href="/applications" aria-current="page">',
       );
@@ -144,10 +144,10 @@ describe("header navigation", () => {
       expect(title.split("Apply and pay for council services").length - 1).toBe(1);
     });
 
-    it("/applications title includes Manage applications", async () => {
+    it("/applications title includes the default service name", async () => {
       const response = await request(getServer()).get("/applications");
 
-      expect(getTitle(response.text)).toContain("Manage applications");
+      expect(getTitle(response.text)).toContain("Apply and pay for council services");
     });
 
     it("an error state keeps the Error: prefix and still includes the service name", async () => {
